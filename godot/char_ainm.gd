@@ -16,7 +16,6 @@ func do_ko():
 	transition_node_set_current("active_passive", 1)
 func do_punch():
 	transition_node_set_current("punch", 1.0)
-	print("punch")
 	punch_delay = punch_time
 	var anim = animation_node_get_animation("punch_anim")
 	anim.set_loop(true)

@@ -7,8 +7,10 @@ export var mass = 70
 export var strength = 10
 export var health = 100
 
+var max_health
 var dead = false
 var ko = false
+
 class HipsSphere extends BoneAttachment:
 	var skel
 	var col
@@ -44,6 +46,9 @@ var skel
 var coltrig = false
 var animp
 var damage_const = 16
+var level = 0
+var score = 0
+var next_score
 func can_move():
 	if not ko and not dead:
 		return true
@@ -56,19 +61,30 @@ func punched(c, dam):
 	if health > 0 and damage > strength * 3:
 		ko = true
 		print("ko")
+		anim.reset()
+		anim.do_ko()
+	var dtest = 10 + randi() % strength
+	if dtest < 0:
+		dtest = 0
+	if health < dtest:
+		ko = true
+		print("ko")
+		anim.reset()
 		anim.do_ko()
 	if health < 0:
 		health = 0
 		dead = true
 		print("dead")
+		anim.reset()
 		anim.do_die()
 	if player:
 		get_tree().call_group(0, "gui", "set_health", health)
 func punch(c):
 	c.punched(self, randi() % strength + strength / 10)
+	score += 1
 
 func _ready():
-	# Initialization here
+	max_health = health
 	set_mode(self.MODE_CHARACTER)
 	down = get_node("down")
 	down.set_enabled(true)
@@ -88,11 +104,11 @@ func _ready():
 	
 	var mat = mesh.surface_get_material(0).duplicate()
 	var c = Color(randf() / 2.0, randf() / 2.0, randf() / 2.0)
-	print(c)
 	mat.set_parameter(mat.PARAM_DIFFUSE, c)
 	mesh.surface_set_material(0, mat)
 	meshi.set_mesh(mesh)
 	anim.do_stop()
+	next_score = 10
 	
 	sight.set_enabled(true)
 	set_fixed_process(true)
@@ -108,9 +124,9 @@ func do_attack(e, v):
 var attack_delay = 0.0
 func _fixed_process(delta):
 	var lv = get_linear_velocity()
-	if sight.is_colliding():
-		print(get_name(), " sight:", sight.is_colliding())
-		print(sight.get_collider())
+#	if sight.is_colliding():
+#		print(get_name(), " sight:", sight.is_colliding())
+#		print(sight.get_collider())
 	if not player:
 		if game_player != null and can_move():
 			var pt = game_player.get_transform()
@@ -158,6 +174,13 @@ func _fixed_process(delta):
 						do_attack(f, 20)
 				else:
 						do_attack(null, 0)
+	elif dead and player:
+		if Input.is_action_pressed("pl_attack"):
+			health = max_health / 2
+			dead = false
+			ko = false
+			anim.reset()
+			anim.recompute_caches()
 	if attack:
 		anim.reset()
 		anim.recompute_caches()
@@ -172,9 +195,12 @@ func _fixed_process(delta):
 		tv.y = 0
 		if tv.length() > 0.2:
 			anim.do_walk(tv.length())
-			print(tv)
 		else:
 			anim.do_stop()
-		if health < health / (10 - (strength - 1)/ 10 + 1):
-			ko = true
+	if score > next_score:
+		level = level + 1
+		next_score = next_score + pow(score, 2) / 50
+		max_health = max_health + 1
+		health = max_health
+		strength = strength + 1
 		
