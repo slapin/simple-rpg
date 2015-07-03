@@ -6,10 +6,14 @@ export var player = false
 export var mass = 70
 export var strength = 10
 export var health = 100
+export var immortal = false
 
 var max_health
 var dead = false
 var ko = false
+var gfx_root
+var npc = false
+var follow = false
 
 class HipsSphere extends BoneAttachment:
 	var skel
@@ -57,12 +61,15 @@ func can_move():
 func punched(c, dam):
 	var defence = strength / 10
 	var damage = dam / (defence + 1)
-	health -= damage
+	if ! immortal:
+		health -= damage
 	if health > 0 and damage > strength * 3:
 		ko = true
 		print("ko")
 		anim.reset()
 		anim.do_ko()
+		if follow:
+			follow = false
 	var dtest = 10 + randi() % strength
 	if dtest < 0:
 		dtest = 0
@@ -71,6 +78,7 @@ func punched(c, dam):
 		print("ko")
 		anim.reset()
 		anim.do_ko()
+		follow = false
 	if health < 0:
 		health = 0
 		dead = true
@@ -83,7 +91,24 @@ func punch(c):
 	c.punched(self, randi() % strength + strength / 10)
 	score += 1
 
+var pl_objects = {
+	"man": {
+				"anim": "man/AnimationPlayer",
+				"skel": "man/711man/Skeleton",
+				"bottom_clothes": "man/711man/Skeleton/pants",
+	},
+	"woman": {
+				"anim": "woman/AnimationPlayer",
+				"skel": "woman/711woman/Skeleton",
+				"bottom_clothes": "woman/711woman/Skeleton/skirt",
+	}
+}
+
 func _ready():
+	if has_node("man"):
+		gfx_root = "man"
+	else:
+		gfx_root = "woman"
 	max_health = health
 	set_mode(self.MODE_CHARACTER)
 	down = get_node("down")
@@ -91,15 +116,17 @@ func _ready():
 	if enemy:
 		add_to_group("enemies")
 	if not enemy and not player:
-		add_to_group("bystanders")
+		npc = true
+		add_to_group("npc")
 	add_to_group("characters")
 	anim = get_node("anim")
-	animp = get_node("man/AnimationPlayer")
+	animp = get_node(pl_objects[gfx_root]["anim"])
 	sight = get_node("sight")
-	skel = get_node("man/711man/Skeleton")
+	skel = get_node(pl_objects[gfx_root]["skel"])
 	hip_attach = HipsSphere.new(self)
 	skel.add_child(hip_attach)
-	var meshi = get_node("man/711man/Skeleton/pants")
+	var meshi = get_node(pl_objects[gfx_root]["bottom_clothes"])
+	print(meshi, pl_objects[gfx_root]["bottom_clothes"])
 	var mesh = meshi.get_mesh().duplicate()
 	
 	var mat = mesh.surface_get_material(0).duplicate()
@@ -121,35 +148,66 @@ func do_attack(e, v):
 		punch(e)
 	anim.do_punch()
 	attack=true
+func do_grabkill(c):
+	anim.do_grabkill()
+	c.set_mode(MODE_KINEMATIC)
+func do_grab(e):
+	if e != null and e.is_in_group("npc"):
+		if ! e.follow:
+			print("grabbing: " + e.get_name())
+			e.apply_impulse(Vector3(0.0, 0.0, 0.0), get_global_transform().basis[2] * 2)
+			e.follow = true
+			e._set_player(self)
+	else:
+		if e.ko:
+			do_grabkill(e)
+		else:
+			if randi() % 3 == 2:
+				e.ko = false
+				e.enemy = false
+				e.add_to_group("npc")
+				e.remove_from_group("enemies")
+				e.npc = true
 var attack_delay = 0.0
+func do_chase(delta):
+	var pt = game_player.get_transform()
+	var ppos = pt.origin
+	var npct = get_transform()
+	set_transform(npct.looking_at(ppos, upv))
+	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
+		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
 func _fixed_process(delta):
 	var lv = get_linear_velocity()
 #	if sight.is_colliding():
 #		print(get_name(), " sight:", sight.is_colliding())
 #		print(sight.get_collider())
-	if not player:
+	if enemy:
 		if game_player != null and can_move():
-			var pt = game_player.get_transform()
-			var ppos = pt.origin
-			var npct = get_transform()
-			set_transform(npct.looking_at(ppos, upv))
-			if get_linear_velocity().length() < 40 and !sight.is_colliding():
-				apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
+			do_chase(delta)
 			if !attack_delay > 0.0:
 				if sight.is_colliding():
 					var c = sight.get_collider()
 					if c.is_in_group("enemies"):
-						if enemy:
-							if randi() % 10 > 1:
-								do_attack(c, 300)
-								coltrig = true
+						if randi() % 10 > 1:
+							do_attack(c, 300)
+							coltrig = true
 					elif c.is_in_group("characters"):
-						if enemy:
-							do_attack(c, 600)
-						attack_delay = 1.0
+						do_attack(c, 600)
+					attack_delay = 1.0
 			else:
 				attack_delay -= delta
-	elif can_move():
+	elif npc:
+		if game_player != null and can_move():
+			if follow:
+				do_chase(delta)
+				if sight.is_colliding():
+					var c = sight.get_collider()
+					if c.is_in_group("characters"):
+						if !c.can_move():
+							c.apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2] * c.get_mass() * 2 + Vector3(0.0, 1.5, 0.0))
+						elif c.is_in_group("enemies"):
+							c.do_attack(c, 60)
+	elif player and can_move():
 		if game_player == null:
 			game_player = self
 			get_tree().call_group(0, "enemies", "_set_player", self)
@@ -174,6 +232,13 @@ func _fixed_process(delta):
 						do_attack(f, 20)
 				else:
 						do_attack(null, 0)
+			if Input.is_action_pressed("pl_grab"):
+				if sight.is_colliding():
+					var f = sight.get_collider()
+					if f.is_in_group("npc"):
+						do_grab(f)
+					if f.is_in_group("enemies"):
+						do_grab(f)
 	elif dead and player:
 		if Input.is_action_pressed("pl_attack"):
 			health = max_health / 2
@@ -203,4 +268,7 @@ func _fixed_process(delta):
 		max_health = max_health + 1
 		health = max_health
 		strength = strength + 1
-		
+	if player and immortal:
+		ko = false
+	if npc and follow:
+		ko = false

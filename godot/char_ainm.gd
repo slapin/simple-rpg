@@ -7,7 +7,10 @@ extends AnimationTreePlayer
 var punch_delay = 0.0
 export var punch_time = 0.5
 export var walk_scale = 2.1
+
+var walk_scale_add
 func _ready():
+	walk_scale_add = randf()
 	set_active(true)
 	set_fixed_process(true)
 func do_ko():
@@ -23,7 +26,7 @@ func do_punch():
 
 # special animation, do not set transitions
 func do_walk(sc):
-	timescale_node_set_scale("walk_scale", sc / walk_scale)
+	timescale_node_set_scale("walk_scale", sc / (walk_scale + walk_scale_add))
 	transition_node_set_current("stay_walk", 1)
 func do_stop():
 	transition_node_set_current("stay_walk", 0)
@@ -33,7 +36,14 @@ func do_die():
 	do_stop()
 	transition_node_set_current("passive_state", 0)
 	transition_node_set_current("active_passive", 1)
-
+func do_grabkill():
+	do_stop()
+	transition_node_set_current("passive_state", 0)
+	transition_node_set_current("active_passive", 3)
+func do_grabkilled():
+	do_stop()
+	transition_node_set_current("passive_state", 1)
+	transition_node_set_current("active_passive", 1)
 
 func _fixed_process(delta):
 	if (punch_delay > 0.0):
