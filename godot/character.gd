@@ -8,6 +8,9 @@ export var strength = 10
 export var health = 100
 export var immortal = false
 
+var hand_target
+var neck_target
+
 var max_health
 var dead = false
 var ko = false
@@ -36,6 +39,11 @@ class HipsSphere extends BoneAttachment:
 		mover.add_child(col)
 		body.add_shape(col)
 
+const STATE_NORMAL = 0
+const STATE_GRABKILL = 1
+const STATE_GRABKILLED = 2
+var state = STATE_NORMAL
+var grabbed_ch
 
 var body
 var down
@@ -65,7 +73,6 @@ func punched(c, dam):
 		health -= damage
 	if health > 0 and damage > strength * 3:
 		ko = true
-		print("ko")
 		anim.reset()
 		anim.do_ko()
 		if follow:
@@ -75,14 +82,12 @@ func punched(c, dam):
 		dtest = 0
 	if health < dtest:
 		ko = true
-		print("ko")
 		anim.reset()
 		anim.do_ko()
 		follow = false
 	if health < 0:
 		health = 0
 		dead = true
-		print("dead")
 		anim.reset()
 		anim.do_die()
 	if player:
@@ -103,8 +108,31 @@ var pl_objects = {
 				"bottom_clothes": "woman/711woman/Skeleton/skirt",
 	}
 }
+func switch_state(newstate):
+	if newstate != state:
+		if state == STATE_NORMAL:
+			if newstate == STATE_GRABKILL:
+				anim.do_grabkill()
+			elif newstate == STATE_GRABKILLED:
+				anim.do_grabkilled()
+		elif state == STATE_GRABKILL:
+			if newstate == STATE_GRABKILLED:
+				pass
+			elif newstate == STATE_NORMAL:
+				anim.do_stop()
+		elif state == STATE_GRABKILLED:
+			if newstate == STATE_GRABKILL:
+				pass
+			elif newstate == STATE_NORMAL:
+				anim.do_idle()
+		state = newstate
+
 
 func _ready():
+	if has_node("neck-target"):
+		neck_target = get_node("neck-target").get_transform()
+	if has_node("hand-target"):
+		hand_target = get_node("hand-target").get_transform()
 	if has_node("man"):
 		gfx_root = "man"
 	else:
@@ -126,7 +154,6 @@ func _ready():
 	hip_attach = HipsSphere.new(self)
 	skel.add_child(hip_attach)
 	var meshi = get_node(pl_objects[gfx_root]["bottom_clothes"])
-	print(meshi, pl_objects[gfx_root]["bottom_clothes"])
 	var mesh = meshi.get_mesh().duplicate()
 	
 	var mat = mesh.surface_get_material(0).duplicate()
@@ -149,25 +176,41 @@ func do_attack(e, v):
 	anim.do_punch()
 	attack=true
 func do_grabkill(c):
-	anim.do_grabkill()
+	switch_state(STATE_GRABKILL)
+	c.switch_state(STATE_GRABKILLED)
 	c.set_mode(MODE_KINEMATIC)
+	var trz = c.get_transform()
+	var p = get_transform().origin
+	var h = get_transform().basis[2]
+	var th = Vector3(-c.neck_target.origin.x, c.neck_target.origin.y, c.neck_target.origin.z)
+	var offt = hand_target.origin - th
+	print(offt)
+	add_collision_exception_with(c)
+	c.add_collision_exception_with(self)
+	c.set_linear_velocity(Vector3(0.0, 0.0, 0.0))
+	set_linear_velocity(Vector3(0.0, 0.0, 0.0))
+	look_at(p - h * 10 , Vector3(0.0, 1.0, 0.0))
+	c.look_at_from_pos(p, p + h * 10 + offt, Vector3(0.0, 1.0, 0.0))
+	var offt = get_node("hand-target").get_global_transform().origin - c.get_node("neck-target").get_global_transform().origin
+	c.look_at_from_pos(p + offt, p + h * 10, Vector3(0.0, 1.0, 0.0))
+	grabbed_ch = c
 func do_grab(e):
 	if e != null and e.is_in_group("npc"):
 		if ! e.follow:
-			print("grabbing: " + e.get_name())
 			e.apply_impulse(Vector3(0.0, 0.0, 0.0), get_global_transform().basis[2] * 2)
 			e.follow = true
 			e._set_player(self)
 	else:
-		if e.ko:
-			do_grabkill(e)
-		else:
-			if randi() % 3 == 2:
-				e.ko = false
-				e.enemy = false
-				e.add_to_group("npc")
-				e.remove_from_group("enemies")
-				e.npc = true
+		do_grabkill(e)
+#		if e.ko:
+#			do_grabkill(e)
+#		else:
+#			if randi() % 3 == 2:
+#				e.ko = false
+#				e.enemy = false
+#				e.add_to_group("npc")
+#				e.remove_from_group("enemies")
+#				e.npc = true
 var attack_delay = 0.0
 func do_chase(delta):
 	var pt = game_player.get_transform()
@@ -176,38 +219,45 @@ func do_chase(delta):
 	set_transform(npct.looking_at(ppos, upv))
 	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
 		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
-func _fixed_process(delta):
-	var lv = get_linear_velocity()
-#	if sight.is_colliding():
-#		print(get_name(), " sight:", sight.is_colliding())
-#		print(sight.get_collider())
-	if enemy:
-		if game_player != null and can_move():
+
+func npc_state_normal(delta):
+	if game_player != null and can_move():
+		if follow:
 			do_chase(delta)
-			if !attack_delay > 0.0:
-				if sight.is_colliding():
-					var c = sight.get_collider()
-					if c.is_in_group("enemies"):
-						if randi() % 10 > 1:
-							do_attack(c, 300)
-							coltrig = true
-					elif c.is_in_group("characters"):
-						do_attack(c, 600)
-					attack_delay = 1.0
-			else:
-				attack_delay -= delta
-	elif npc:
-		if game_player != null and can_move():
-			if follow:
-				do_chase(delta)
-				if sight.is_colliding():
-					var c = sight.get_collider()
-					if c.is_in_group("characters"):
-						if !c.can_move():
-							c.apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2] * c.get_mass() * 2 + Vector3(0.0, 1.5, 0.0))
-						elif c.is_in_group("enemies"):
-							c.do_attack(c, 60)
-	elif player and can_move():
+			if sight.is_colliding():
+				var c = sight.get_collider()
+				if c.is_in_group("characters"):
+					if !c.can_move():
+						c.apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2] * c.get_mass() * 2 + Vector3(0.0, 1.5, 0.0))
+					elif c.is_in_group("enemies"):
+						c.do_attack(c, 60)
+	if follow:
+		ko = false
+func npc_state_grabkill(delta):
+	anim.do_grabkill()
+func npc_state_grabkilled(delta):
+	anim.do_grabkilled()
+func enemy_state_normal(delta):
+	if game_player != null and can_move():
+		do_chase(delta)
+		if !attack_delay > 0.0:
+			if sight.is_colliding():
+				var c = sight.get_collider()
+				if c.is_in_group("enemies"):
+					if randi() % 10 > 1:
+						do_attack(c, 300)
+						coltrig = true
+				elif c.is_in_group("characters"):
+					do_attack(c, 600)
+				attack_delay = 1.0
+		else:
+			attack_delay -= delta
+func enemy_state_grabkill(delta):
+	pass
+func enemy_state_grabkilled(delta):
+	anim.do_grabkilled()
+func player_state_normal(delta):
+	if can_move():
 		if game_player == null:
 			game_player = self
 			get_tree().call_group(0, "enemies", "_set_player", self)
@@ -239,36 +289,61 @@ func _fixed_process(delta):
 						do_grab(f)
 					if f.is_in_group("enemies"):
 						do_grab(f)
-	elif dead and player:
+	elif dead:
 		if Input.is_action_pressed("pl_attack"):
 			health = max_health / 2
 			dead = false
 			ko = false
 			anim.reset()
 			anim.recompute_caches()
-	if attack:
-		anim.reset()
-		anim.recompute_caches()
-		attack = false
-	var rv = get_linear_velocity()
-	if rv.length() > 10:
-		set_linear_velocity(rv.normalized() * 6)
+	if immortal:
+		ko = false
+
+func player_state_grabkill(delta):
+	anim.do_grabkill()
+	if Input.is_action_pressed("pl_attack"):
+		switch_state(STATE_NORMAL)
+func run_state(delta):
+	if state == STATE_NORMAL:
+		if enemy:
+			enemy_state_normal(delta)
+		elif player:
+			player_state_normal(delta)
+		elif npc:
+			npc_state_normal(delta)
+		if attack:
+			anim.reset()
+			anim.recompute_caches()
+			attack = false
+		var rv = get_linear_velocity()
+		if rv.length() > 10:
+			set_linear_velocity(rv.normalized() * 6)
+		if can_move():
+			var tv = get_linear_velocity()
+			tv.y = 0
+			if tv.length() > 0.2:
+				anim.do_walk(tv.length())
+			else:
+				anim.do_stop()
+		if score > next_score:
+			level = level + 1
+			next_score = next_score + pow(score, 2) / 50
+			max_health = max_health + 1
+			health = max_health
+			strength = strength + 1
+	elif state == STATE_GRABKILL:
+		if player:
+			player_state_grabkill(delta)
+	elif state == STATE_GRABKILLED:
+		if enemy:
+			enemy_state_grabkilled(delta)
+		elif npc:
+			npc_state_grabkilled(delta)
+func _fixed_process(delta):
+	var lv = get_linear_velocity()
+#	if sight.is_colliding():
+#		print(get_name(), " sight:", sight.is_colliding())
+#		print(sight.get_collider())
+	run_state(delta)
 	if is_sleeping():
 		set_sleeping(false)
-	if can_move():
-		var tv = get_linear_velocity()
-		tv.y = 0
-		if tv.length() > 0.2:
-			anim.do_walk(tv.length())
-		else:
-			anim.do_stop()
-	if score > next_score:
-		level = level + 1
-		next_score = next_score + pow(score, 2) / 50
-		max_health = max_health + 1
-		health = max_health
-		strength = strength + 1
-	if player and immortal:
-		ko = false
-	if npc and follow:
-		ko = false
