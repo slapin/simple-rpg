@@ -6,7 +6,7 @@ extends AnimationTreePlayer
 # var b="textvar"
 var punch_delay = 0.0
 export var punch_time = 0.5
-export var walk_scale = 2.1
+export var walk_scale = 0.01
 
 
 const ANIM_KO = 0
@@ -18,6 +18,7 @@ const ANIM_GRABKILL = 5
 const ANIM_GRABKILLED = 6
 
 var current_anim = -1
+var oldsc = 0.0
 func switch_anim(anim, sc=1.0):
 	if current_anim != anim:
 		transition_node_set_current("stay_walk", 0)
@@ -33,10 +34,13 @@ func switch_anim(anim, sc=1.0):
 			anim.set_loop(true)
 			animation_node_set_animation("punch_anim", anim)
 		elif anim == ANIM_WALK:
-			timescale_node_set_scale("walk_scale", sc / (walk_scale + walk_scale_add))
+#			timescale_node_set_scale("walk_scale", sc / (walk_scale + walk_scale_add))
+			timescale_node_set_scale("walk_scale", sc * 19.0)
 			transition_node_set_current("stay_walk", 1)
+			oldsc = sc
 		elif anim == ANIM_STOP:
 			transition_node_set_current("stay_walk", 0)
+			transition_node_set_current("passive_state", 0)
 			transition_node_set_current("active_state", 0)
 			transition_node_set_current("active_passive", 0)
 		elif anim == ANIM_DIE:
@@ -50,11 +54,16 @@ func switch_anim(anim, sc=1.0):
 			transition_node_set_current("passive_state", 1)
 			transition_node_set_current("active_passive", 1)
 		current_anim = anim
+	else:
+		if anim == ANIM_WALK and sc != oldsc:
+			timescale_node_set_scale("walk_scale", sc * 19.0)
+			oldsc = sc
 	
 
 var walk_scale_add
 func _ready():
-	walk_scale_add = randf()
+	switch_anim(ANIM_STOP)
+	walk_scale_add = 0.0
 	set_active(true)
 	set_fixed_process(true)
 func do_ko():
