@@ -45,6 +45,7 @@ func _order(id):
 	order.hide()
 
 func _popup_show():
+	set_orders()
 	get_tree().set_pause(true)
 func show_orders(col):
 	order.show()
