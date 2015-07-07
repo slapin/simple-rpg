@@ -324,7 +324,8 @@ func player_state_normal(delta):
 				else:
 						do_attack(null, 0)
 			if Input.is_action_pressed("pl_grab"):
-				sight.process_orders(self)
+				if not disable_grab:
+					sight.process_orders(self)
 #				if not disable_grab:
 #					if sight.is_colliding() and grab_delay <= 0.0:
 #						var f = sight.get_collider()
@@ -333,8 +334,8 @@ func player_state_normal(delta):
 #						if f.is_in_group("enemies"):
 #							do_grab(f)
 #					disable_grab = true
-#			else:
-#					disable_grab = false
+			else:
+					disable_grab = false
 	elif dead:
 		if Input.is_action_pressed("pl_attack"):
 			health = max_health / 2
