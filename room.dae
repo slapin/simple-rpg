@@ -5,8 +5,8 @@
 		<author> Anonymous </author>
 		<authoring_tool> Collada Exporter for Blender 2.6+, by Juan Linietsky (juan@codenix.com) </authoring_tool>
 	</contributor>
-	<created>2015-06-29T15:54:03Z     </created>
-	<modified>2015-06-29T15:54:03Z</modified>
+	<created>2015-07-10T03:37:34Z     </created>
+	<modified>2015-07-10T03:37:34Z</modified>
 	<unit meter="1.0" name="meter"/>
 	<up_axis>Z_UP</up_axis>
 </asset>
@@ -18,25 +18,27 @@
 			<technique sid="common">
 				<blinn>
 					<emission>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</emission>
 					<ambient>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</ambient>
 					<diffuse>
-						<color>  0.05717633451784154 0.07124541508027038 0.08197876337138954 </color>
+						<color>  0.05717633451784154 0.07124541508027038 0.08197876337138954 1.0 </color>
 					</diffuse>
 					<specular>
-						<color>  0.20000000298023224 0.20000000298023224 0.20000000298023224 </color>
+						<color>  0.20000000298023224 0.20000000298023224 0.20000000298023224 1.0 </color>
 					</specular>
 					<shininess>
 						<float>4</float>
 					</shininess>
 					<reflective>
-						<color>  1.0 1.0 1.0 </color>
+						<color>  1.0 1.0 1.0 1.0 </color>
 					</reflective>
+					<index_of_refraction>
+						<float>4.0</float>
+					</index_of_refraction>
 				</blinn>
-				<index_of_refraction>4.0</index_of_refraction>
 				<extra>
 					<technique profile="FCOLLADA">
 					</technique>
@@ -52,25 +54,27 @@
 			<technique sid="common">
 				<blinn>
 					<emission>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</emission>
 					<ambient>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</ambient>
 					<diffuse>
-						<color>  0.640000066757203 0.12481302208919853 0.2090933830900994 </color>
+						<color>  0.640000066757203 0.12481302208919853 0.2090933830900994 1.0 </color>
 					</diffuse>
 					<specular>
-						<color>  0.009999999776482582 0.009999999776482582 0.009999999776482582 </color>
+						<color>  0.009999999776482582 0.009999999776482582 0.009999999776482582 1.0 </color>
 					</specular>
 					<shininess>
 						<float>2</float>
 					</shininess>
 					<reflective>
-						<color>  1.0 1.0 1.0 </color>
+						<color>  1.0 1.0 1.0 1.0 </color>
 					</reflective>
+					<index_of_refraction>
+						<float>4.0</float>
+					</index_of_refraction>
 				</blinn>
-				<index_of_refraction>4.0</index_of_refraction>
 				<extra>
 					<technique profile="FCOLLADA">
 					</technique>
@@ -86,25 +90,27 @@
 			<technique sid="common">
 				<blinn>
 					<emission>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</emission>
 					<ambient>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</ambient>
 					<diffuse>
-						<color>  0.800000011920929 0.800000011920929 0.800000011920929 </color>
+						<color>  0.800000011920929 0.800000011920929 0.800000011920929 1.0 </color>
 					</diffuse>
 					<specular>
-						<color>  0.10000000149011612 0.10000000149011612 0.10000000149011612 </color>
+						<color>  0.10000000149011612 0.10000000149011612 0.10000000149011612 1.0 </color>
 					</specular>
 					<shininess>
 						<float>3</float>
 					</shininess>
 					<reflective>
-						<color>  1.0 1.0 1.0 </color>
+						<color>  1.0 1.0 1.0 1.0 </color>
 					</reflective>
+					<index_of_refraction>
+						<float>4.0</float>
+					</index_of_refraction>
 				</blinn>
-				<index_of_refraction>4.0</index_of_refraction>
 				<extra>
 					<technique profile="FCOLLADA">
 					</technique>
@@ -120,25 +126,27 @@
 			<technique sid="common">
 				<blinn>
 					<emission>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</emission>
 					<ambient>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</ambient>
 					<diffuse>
-						<color>  0.008284117404879887 0.008055835337278772 0.015078856275660635 </color>
+						<color>  0.008284117404879887 0.008055835337278772 0.015078856275660635 1.0 </color>
 					</diffuse>
 					<specular>
-						<color>  0.5 0.5 0.5 </color>
+						<color>  0.5 0.5 0.5 1.0 </color>
 					</specular>
 					<shininess>
 						<float>200</float>
 					</shininess>
 					<reflective>
-						<color>  1.0 1.0 1.0 </color>
+						<color>  1.0 1.0 1.0 1.0 </color>
 					</reflective>
+					<index_of_refraction>
+						<float>4.0</float>
+					</index_of_refraction>
 				</blinn>
-				<index_of_refraction>4.0</index_of_refraction>
 				<extra>
 					<technique profile="FCOLLADA">
 					</technique>
@@ -154,25 +162,27 @@
 			<technique sid="common">
 				<blinn>
 					<emission>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</emission>
 					<ambient>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</ambient>
 					<diffuse>
-						<color>  0.3857351598998182 0.640000066757203 0.31155598627859327 </color>
+						<color>  0.3857351598998182 0.640000066757203 0.31155598627859327 1.0 </color>
 					</diffuse>
 					<specular>
-						<color>  0.06858357402722959 0.09712231159210205 0.061761735579167976 </color>
+						<color>  0.06858357402722959 0.09712231159210205 0.061761735579167976 1.0 </color>
 					</specular>
 					<shininess>
 						<float>10</float>
 					</shininess>
 					<reflective>
-						<color>  1.0 1.0 1.0 </color>
+						<color>  1.0 1.0 1.0 1.0 </color>
 					</reflective>
+					<index_of_refraction>
+						<float>4.0</float>
+					</index_of_refraction>
 				</blinn>
-				<index_of_refraction>4.0</index_of_refraction>
 				<extra>
 					<technique profile="FCOLLADA">
 					</technique>
@@ -188,25 +198,27 @@
 			<technique sid="common">
 				<blinn>
 					<emission>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</emission>
 					<ambient>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</ambient>
 					<diffuse>
-						<color>  0.11392007043838603 0.037718853916508754 0.01982805460435233 </color>
+						<color>  0.11392007043838603 0.037718853916508754 0.01982805460435233 1.0 </color>
 					</diffuse>
 					<specular>
-						<color>  0.20000000298023224 0.20000000298023224 0.20000000298023224 </color>
+						<color>  0.20000000298023224 0.20000000298023224 0.20000000298023224 1.0 </color>
 					</specular>
 					<shininess>
 						<float>16</float>
 					</shininess>
 					<reflective>
-						<color>  1.0 1.0 1.0 </color>
+						<color>  1.0 1.0 1.0 1.0 </color>
 					</reflective>
+					<index_of_refraction>
+						<float>4.0</float>
+					</index_of_refraction>
 				</blinn>
-				<index_of_refraction>4.0</index_of_refraction>
 				<extra>
 					<technique profile="FCOLLADA">
 					</technique>
@@ -222,25 +234,27 @@
 			<technique sid="common">
 				<blinn>
 					<emission>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</emission>
 					<ambient>
-						<color>  0.0 0.0 0.0  </color>
+						<color>  0.0 0.0 0.0 1.0  </color>
 					</ambient>
 					<diffuse>
-						<color>  0.4821286201477051 0.7545462250709534 0.8000000715255737 </color>
+						<color>  0.4821286201477051 0.7545462250709534 0.8000000715255737 1.0 </color>
 					</diffuse>
 					<specular>
-						<color>  0.10000000149011612 0.10000000149011612 0.10000000149011612 </color>
+						<color>  0.10000000149011612 0.10000000149011612 0.10000000149011612 1.0 </color>
 					</specular>
 					<shininess>
 						<float>3</float>
 					</shininess>
 					<reflective>
-						<color>  1.0 1.0 1.0 </color>
+						<color>  1.0 1.0 1.0 1.0 </color>
 					</reflective>
+					<index_of_refraction>
+						<float>4.0</float>
+					</index_of_refraction>
 				</blinn>
-				<index_of_refraction>4.0</index_of_refraction>
 				<extra>
 					<technique profile="FCOLLADA">
 					</technique>
