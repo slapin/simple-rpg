@@ -17,6 +17,7 @@ var ko = false
 var gfx_root
 var npc = false
 var follow = false
+var female
 
 class HipsSphere extends BoneAttachment:
 	var skel
@@ -43,8 +44,10 @@ const STATE_NORMAL = 0
 const STATE_GRABKILL = 1
 const STATE_GRABKILLED = 2
 const STATE_KO = 3
+const STATE_ACTION = 4
 var state = STATE_NORMAL
 var grabbed_ch
+var action
 
 var body
 var down
@@ -105,6 +108,7 @@ var pl_objects = {
 				"bottom_clothes": "woman/711woman/Skeleton/skirt",
 	}
 }
+
 func switch_to_ko():
 	ko = true
 	anim.reset()
@@ -113,44 +117,92 @@ func switch_to_ko():
 		follow = false
 
 var disable_grab = false
+var state_to_anim = {
+	STATE_NORMAL: {
+		STATE_GRABKILL: "do_grabkill",
+		STATE_GRABKILLED: "do_grabkilled",
+	},
+	STATE_GRABKILL: {
+		STATE_NORMAL: "do_stop",
+	},
+	STATE_GRABKILLED: {
+		STATE_NORMAL: "do_stop",
+	},
+	STATE_KO: {
+		STATE_NORMAL: "do_stop",
+		STATE_GRABKILL: "do_grabkill",
+		STATE_GRABKILLED: "do_grabkilled",
+	},
+	STATE_ACTION: {
+		STATE_NORMAL: "do_stop",
+		STATE_GRABKILL: "do_grabkill",
+		STATE_GRABKILLED: "do_grabkilled",
+	}
+}
+var state_to_method = {
+}
+var state_to_text = {
+	STATE_NORMAL: "normal",
+	STATE_GRABKILL: "grabkill",
+	STATE_GRABKILLED: "grabkilled",
+	STATE_KO: "ko",
+	STATE_ACTION: "action",
+}
+
+func grabkill_to_normal():
+#	get_parent().add_child(grabbed_ch)
+#	remove_child(grabbed_ch)
+	grabbed_ch.remove_collision_exception_with(self)
+	remove_collision_exception_with(grabbed_ch)
+	if Input.is_action_pressed("pl_grab"):
+		disable_grab = true
+func grabkilled_to_normal():
+	set_mode(MODE_CHARACTER)
+func switch_from_ko():
+	ko = false
+func switch_to_action():
+	anim.do_stop()
+	set_mode(MODE_KINEMATIC)
+func switch_from_action():
+	anim.do_stop()
+	set_mode(MODE_CHARACTER)
+
 func switch_state(newstate):
 	if newstate != state:
+		if state_to_anim.has(state):
+			if state_to_anim[state].has(newstate):
+				if anim.has_method(state_to_anim[state][newstate]):
+					anim.call(state_to_anim[state][newstate])
+				else:
+					anim.call(state_to_anim[state][newstate])
+		if state_to_method.has(state):
+			if state_to_method[state].has(newstate):
+				if has_method(state_to_method[state][newstate]):
+					call(state_to_method[state][newstate])
+				else:
+					call(state_to_method[state][newstate])
+		if has_method(state_to_text[state] + "_to_" + state_to_text[newstate]):
+			call(state_to_text[state] + "_to_" + state_to_text[newstate])
+		if has_method("switch_from_" + state_to_text[state]):
+			call("switch_from_" + state_to_text[state])
+		if has_method("switch_to_" + state_to_text[newstate]):
+			call("switch_to_" + state_to_text[newstate])
 		if state == STATE_NORMAL:
-			if newstate == STATE_GRABKILL:
-				anim.do_grabkill()
-			elif newstate == STATE_GRABKILLED:
-				anim.do_grabkilled()
-			elif newstate == STATE_KO:
-				switch_to_ko()
+			if newstate == STATE_ACTION:
+				pass
 		elif state == STATE_GRABKILL:
 			if newstate == STATE_GRABKILLED:
 				pass
-			elif newstate == STATE_NORMAL:
-				get_parent().add_child(grabbed_ch)
-				anim.do_stop()
-				remove_child(grabbed_ch)
-				grabbed_ch.remove_collision_exception_with(self)
-				remove_collision_exception_with(grabbed_ch)
-				if Input.is_action_pressed("pl_grab"):
-					disable_grab = true
-			elif newstate == STATE_KO:
-				switch_to_ko()
+			elif newstate == STATE_ACTION:
+				pass
 		elif state == STATE_GRABKILLED:
 			if newstate == STATE_GRABKILL:
 				pass
-			elif newstate == STATE_NORMAL:
-				anim.do_stop()
-				set_mode(MODE_CHARACTER)
-			elif newstate == STATE_KO:
-				switch_to_ko()
+			elif newstate == STATE_ACTION:
+				pass
 		elif state == STATE_KO:
-			ko = false
-			if newstate == STATE_NORMAL:
-				anim.do_stop()
-			if newstate == STATE_GRABKILL:
-				anim.do_grankill()
-			if newstate == STATE_GRABKILLED:
-				anim.do_grabkilled()
+			if newstate == STATE_ACTION:
+				pass
 		state = newstate
 
 var bone_spatials = {}
@@ -167,8 +219,10 @@ func add_bone_spatial(bone):
 func _ready():
 	if has_node("man"):
 		gfx_root = "man"
+		female = false
 	else:
 		gfx_root = "woman"
+		female = true
 	max_health = health
 	set_mode(self.MODE_CHARACTER)
 	down = get_node("down")
@@ -341,8 +395,6 @@ func player_state_normal(delta):
 			health = max_health / 2
 			dead = false
 			ko = false
-			anim.reset()
-			anim.recompute_caches()
 
 func player_state_ko(delta):
 	if immortal:
@@ -381,18 +433,21 @@ func player_state_grabkill(delta):
 			print(get_linear_velocity())
 			apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2]* get_mass() * 10 + Vector3(0.0, 2.5, 0.0) * 3)
 			print(-get_transform().basis[2]* get_mass() + Vector3(0.0, 2.5, 0.0))
+
+
 var stop_delay = 0.0
 func run_state(delta):
+	var rf
+	if enemy:
+		rf = "enemy_state_" + state_to_text[state]
+	elif player:
+		rf = "player_state_" + state_to_text[state]
+	elif npc:
+		rf = "npc_state_" + state_to_text[state]
+	if has_method(rf):
+		call(rf, delta)
 	if state == STATE_NORMAL:
-		if enemy:
-			enemy_state_normal(delta)
-		elif player:
-			player_state_normal(delta)
-		elif npc:
-			npc_state_normal(delta)
 		if attack:
-			anim.reset()
-			anim.recompute_caches()
 			attack = false
 		var rv = get_linear_velocity()
 		if rv.length() > 10:
@@ -416,21 +471,6 @@ func run_state(delta):
 			max_health = max_health + 1
 			health = max_health
 			strength = strength + 1
-	elif state == STATE_GRABKILL:
-		if player:
-			player_state_grabkill(delta)
-	elif state == STATE_GRABKILLED:
-		if enemy:
-			enemy_state_grabkilled(delta)
-		elif npc:
-			npc_state_grabkilled(delta)
-	elif state == STATE_KO:
-		if enemy:
-			enemy_state_ko(delta)
-		elif player:
-			player_state_ko(delta)
-		elif npc:
-			npc_state_ko(delta)
 func _fixed_process(delta):
 	var lv = get_linear_velocity()
 #	if sight.is_colliding():
