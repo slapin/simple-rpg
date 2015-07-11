@@ -68,8 +68,8 @@ var walk_scale_add
 func _ready():
 	switch_anim(ANIM_STOP)
 	walk_scale_add = 0.0
-	set_active(false)
-	set_fixed_process(false)
+	set_active(true)
+	set_fixed_process(true)
 func do_ko():
 	switch_anim(ANIM_KO)
 func do_punch():

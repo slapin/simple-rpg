@@ -218,8 +218,8 @@ func _ready():
 	animp = get_node(pl_objects[gfx_root]["anim"])
 	sight = get_node("sight")
 	skel = get_node(pl_objects[gfx_root]["skel"])
-	var meshi = get_node(pl_objects[gfx_root]["bottom_clothes"])
-	var mesh = meshi.get_mesh().duplicate()
+#	var meshi = get_node(pl_objects[gfx_root]["bottom_clothes"])
+#	var mesh = meshi.get_mesh().duplicate()
 	wrist_L_t = skel.find_bone("wrist_L")
 	wrist_R_t = skel.find_bone("wrist_R")
 	head_t = skel.find_bone("head")
@@ -232,11 +232,11 @@ func _ready():
 #	var head_tr = skel.get_bone_global_pose(head_t).origin
 #	tc.set_translation(head_tr)
 	
-	var mat = mesh.surface_get_material(0).duplicate()
-	var c = Color(randf() / 2.0, randf() / 2.0, randf() / 2.0)
-	mat.set_parameter(mat.PARAM_DIFFUSE, c)
-	mesh.surface_set_material(0, mat)
-	meshi.set_mesh(mesh)
+#	var mat = mesh.surface_get_material(0).duplicate()
+#	var c = Color(randf() / 2.0, randf() / 2.0, randf() / 2.0)
+#	mat.set_parameter(mat.PARAM_DIFFUSE, c)
+#	mesh.surface_set_material(0, mat)
+#	meshi.set_mesh(mesh)
 	anim.do_stop()
 	next_score = 10
 	print("Hello")
