@@ -19,27 +19,6 @@ var npc = false
 var follow = false
 var female
 
-class HipsSphere extends BoneAttachment:
-	var skel
-	var col
-	var mover
-	var body
-	var tbone = Vector3(0.0, 0.1, -1.0)
-	func _init(b):
-		._init()
-		body = b
-	func _ready():
-		skel = get_parent()
-		skel.add_child(self)
-		self.bone_name = "spine05"
-		col = SphereShape.new()
-		col.set_radius(0.3)
-		mover = Spatial.new()
-		add_child(mover)
-		mover.set_translation(tbone)
-		mover.add_child(col)
-		body.add_shape(col)
-
 const STATE_NORMAL = 0
 const STATE_GRABKILL = 1
 const STATE_GRABKILLED = 2
@@ -57,7 +36,6 @@ var upv = Vector3(0.0, 1.0, 0.0)
 var sight
 var anim
 var attack = false
-var hip_attach
 var skel
 var coltrig = false
 var animp
@@ -240,8 +218,6 @@ func _ready():
 	animp = get_node(pl_objects[gfx_root]["anim"])
 	sight = get_node("sight")
 	skel = get_node(pl_objects[gfx_root]["skel"])
-	hip_attach = HipsSphere.new(self)
-	skel.add_child(hip_attach)
 	var meshi = get_node(pl_objects[gfx_root]["bottom_clothes"])
 	var mesh = meshi.get_mesh().duplicate()
 	wrist_L_t = skel.find_bone("wrist_L")
