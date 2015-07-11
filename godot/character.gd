@@ -227,8 +227,14 @@ func _ready():
 	add_bone_spatial("neck02")
 	add_bone_spatial("wrist_R")
 	add_bone_spatial("wrist_L")
+	add_bone_spatial("spine05")
 	neck_target = bone_spatials["neck02"]
 	hand_target = bone_spatials["wrist_R"]
+	var hip_colb = bone_spatials["spine05"]
+	var col = SphereShape.new()
+	col.set_radius(0.3)
+	hip_colb.add_child(col)
+	add_shape(col)
 #	var head_tr = skel.get_bone_global_pose(head_t).origin
 #	tc.set_translation(head_tr)
 	
@@ -239,9 +245,7 @@ func _ready():
 #	meshi.set_mesh(mesh)
 	anim.do_stop()
 	next_score = 10
-	print("Hello")
 	old_pos = get_translation()
-	dbg.append_bbcode("[b]" + get_name() + "[/b] init\n")
 	sight.set_enabled(true)
 	set_fixed_process(true)
 func _set_player(pl):
@@ -288,7 +292,6 @@ func do_chase(delta):
 	var npct = get_transform()
 	set_transform(npct.looking_at(ppos, upv))
 	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
-		dbg.append_bbcode(get_name() + ": applying inpulse:" + str((ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta) +"\n")
 		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
 
 
@@ -412,9 +415,7 @@ func player_state_grabkill(delta):
 		set_transform(r.rotated(Vector3(0.0, 1.0, 0.0), 0.1))
 	if Input.is_action_pressed("pl_forward"):
 		if get_linear_velocity().length() < 10:
-			print(get_linear_velocity())
 			apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2]* get_mass() * 10 + Vector3(0.0, 2.5, 0.0) * 3)
-			print(-get_transform().basis[2]* get_mass() + Vector3(0.0, 2.5, 0.0))
 
 
 var stop_delay = 0.0
@@ -453,7 +454,6 @@ func run_state(delta):
 			max_health = max_health + 1
 			health = max_health
 			strength = strength + 1
-var cnt = 0.0
 func _fixed_process(delta):
 	var lv = get_linear_velocity()
 #	if sight.is_colliding():
@@ -462,9 +462,6 @@ func _fixed_process(delta):
 	run_state(delta)
 	if is_sleeping():
 		set_sleeping(false)
-	if cnt > 2.0:
-		print(get_name(), ": velocity: ", lv)
-	cnt += delta
 func set_follow(f):
 	if is_in_group("npc"):
 		print("Follow: ", get_name())
