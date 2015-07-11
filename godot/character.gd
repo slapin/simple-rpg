@@ -216,13 +216,16 @@ func add_bone_spatial(bone):
 	skel.add_child(sp)
 	skel.bind_child_node_to_bone(bone_t, sp)
 	bone_spatials[bone] = sp1
+var dbg
 func _ready():
+	dbg = get_node("../debug")
 	if has_node("man"):
 		gfx_root = "man"
 		female = false
 	else:
 		gfx_root = "woman"
 		female = true
+	set_can_sleep(false)
 	max_health = health
 	set_mode(self.MODE_CHARACTER)
 	down = get_node("down")
@@ -260,7 +263,9 @@ func _ready():
 	meshi.set_mesh(mesh)
 	anim.do_stop()
 	next_score = 10
+	print("Hello")
 	old_pos = get_translation()
+	dbg.append_bbcode("[b]" + get_name() + "[/b] init\n")
 	sight.set_enabled(true)
 	set_fixed_process(true)
 func _set_player(pl):
@@ -307,6 +312,7 @@ func do_chase(delta):
 	var npct = get_transform()
 	set_transform(npct.looking_at(ppos, upv))
 	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
+		dbg.append_bbcode(get_name() + ": applying inpulse:" + str((ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta) +"\n")
 		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
 
 
@@ -471,6 +477,7 @@ func run_state(delta):
 			max_health = max_health + 1
 			health = max_health
 			strength = strength + 1
+var cnt = 0.0
 func _fixed_process(delta):
 	var lv = get_linear_velocity()
 #	if sight.is_colliding():
@@ -479,6 +486,9 @@ func _fixed_process(delta):
 	run_state(delta)
 	if is_sleeping():
 		set_sleeping(false)
+	if cnt > 2.0:
+		print(get_name(), ": velocity: ", lv)
+	cnt += delta
 func set_follow(f):
 	if is_in_group("npc"):
 		print("Follow: ", get_name())

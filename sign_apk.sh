@@ -1,5 +1,5 @@
 #rm -f simple-rpg.apk simple-rpg-unsigned.apk simple-rpg-unaligned.apk 
-#(cd godot && ~/godot/bin/godot.x11.tools.64 -export Android /home/slapin/simple-rpg/simple-rpg-unsigned.apk)
+(cd godot && ~/godot/bin/godot.x11.tools.64 -export Android /home/slapin/simple-rpg/simple-rpg-unsigned.apk)
 rm -f simple-rpg.apk simple-rpg-unaligned.apk simple-rpg-unsigned2.zip simple-rpg-unsigned2.apk
 rm -Rf simple-rpg-unsigned
 unzip -d simple-rpg-unsigned simple-rpg-unsigned.apk

@@ -19,6 +19,8 @@ var collision_exception=[]
 var previous_pos = null
 var interrior = false
 var fl
+var fb
+var dbg
 func _ready():
 	camera = get_node("camera")
 	player = get_node("player")
@@ -26,6 +28,9 @@ func _ready():
 	physics_state = get_world().get_direct_space_state()
 	cam_orig = camera.get_global_transform().origin
 	collision_exception.append(player.get_rid())
+	fb = get_node("fwd_button")
+	dbg = get_node("debug")
+	dbg.append_bbcode("hello")
 	camera.set_as_toplevel(true)
 	set_fixed_process(true)
 func camera_set(dt):
@@ -72,3 +77,6 @@ func camera_set(dt):
 
 func _fixed_process(delta):
 	camera_set(delta)
+	if fb.is_pressed():
+		Input.action_press("pl_forward")
+	
