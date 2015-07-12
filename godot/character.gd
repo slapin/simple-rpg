@@ -1,36 +1,16 @@
-
-extends RigidBody
-
-export var enemy = false
-export var player = false
-export var mass = 70
-export var strength = 10
-export var health = 100
-export var immortal = false
+extends "res://simple_char.gd"
 
 var hand_target
 var neck_target
 
-var max_health
-var dead = false
-var ko = false
 var gfx_root
-var npc = false
-var follow = false
 var female
 
-const STATE_NORMAL = 0
-const STATE_GRABKILL = 1
-const STATE_GRABKILLED = 2
-const STATE_KO = 3
-const STATE_ACTION = 4
-var state = STATE_NORMAL
 var grabbed_ch
 var action
 
 var body
 var down
-var game_player = null
 var nv = Vector3(0.0, 0.0, 0.0)
 var upv = Vector3(0.0, 1.0, 0.0)
 var sight
@@ -40,39 +20,9 @@ var skel
 var coltrig = false
 var animp
 var damage_const = 16
-var level = 0
-var score = 0
-var next_score
 var wrist_L_t
 var wrist_R_t
 var head_t
-func can_move():
-	if not ko and not dead:
-		return true
-	else:
-		return false
-func punched(c, dam):
-	var defence = strength / 10
-	var damage = dam / (defence + 1)
-	if ! immortal:
-		health -= damage
-	if health > 0 and damage > strength * 3:
-		switch_state(STATE_KO)
-	var dtest = 10 + randi() % strength
-	if dtest < 0:
-		dtest = 0
-	if health < dtest:
-		switch_state(STATE_KO)
-	if health < 0:
-		health = 0
-		dead = true
-		anim.reset()
-		anim.do_die()
-	if player:
-		get_tree().call_group(0, "gui", "set_health", health)
-func punch(c):
-	c.punched(self, randi() % strength + strength / 10)
-	score += 1
 
 var pl_objects = {
 	"man": {
@@ -87,12 +37,15 @@ var pl_objects = {
 	}
 }
 
-func switch_to_ko():
+func switch_to_ko(st):
 	ko = true
 	anim.reset()
 	anim.do_ko()
 	if follow:
 		follow = false
+func switch_to_dead(st):
+	dead = true
+	anim.do_die()
 
 var disable_grab = false
 var state_to_anim = {
@@ -117,32 +70,35 @@ var state_to_anim = {
 		STATE_GRABKILLED: "do_grabkilled",
 	}
 }
-var state_to_method = {
-}
-var state_to_text = {
-	STATE_NORMAL: "normal",
-	STATE_GRABKILL: "grabkill",
-	STATE_GRABKILLED: "grabkilled",
-	STATE_KO: "ko",
-	STATE_ACTION: "action",
+
+var state_pairs = {
+	STATE_GRABKILL: STATE_GRABKILLED,
 }
 
-func grabkill_to_normal():
-#	get_parent().add_child(grabbed_ch)
-#	remove_child(grabbed_ch)
-	grabbed_ch.remove_collision_exception_with(self)
-	remove_collision_exception_with(grabbed_ch)
-	if Input.is_action_pressed("pl_grab"):
-		disable_grab = true
-func grabkilled_to_normal():
-	set_mode(MODE_CHARACTER)
-func switch_from_ko():
+func switch_to_normal(st):
+	if st == STATE_GRABKILL:
+		grabbed_ch.remove_collision_exception_with(self)
+		remove_collision_exception_with(grabbed_ch)
+		if Input.is_action_pressed("pl_grab"):
+			disable_grab = true
+	elif st == STATE_GRABKILLED:
+		set_mode(MODE_CHARACTER)
+
+func switch_from_ko(st):
 	ko = false
-func switch_to_action():
+
+func switch_to_action(st):
 	anim.do_stop()
 	set_mode(MODE_KINEMATIC)
-func switch_from_action():
+
+func switch_from_action(st):
 	anim.do_stop()
+	set_mode(MODE_CHARACTER)
+
+func switch_to_grabkilled(st):
+	set_mode(MODE_KINEMATIC)
+
+func switch_from_grabkilled(st):
 	set_mode(MODE_CHARACTER)
 
 func switch_state(newstate):
@@ -153,35 +109,7 @@ func switch_state(newstate):
 					anim.call(state_to_anim[state][newstate])
 				else:
 					anim.call(state_to_anim[state][newstate])
-		if state_to_method.has(state):
-			if state_to_method[state].has(newstate):
-				if has_method(state_to_method[state][newstate]):
-					call(state_to_method[state][newstate])
-				else:
-					call(state_to_method[state][newstate])
-		if has_method(state_to_text[state] + "_to_" + state_to_text[newstate]):
-			call(state_to_text[state] + "_to_" + state_to_text[newstate])
-		if has_method("switch_from_" + state_to_text[state]):
-			call("switch_from_" + state_to_text[state])
-		if has_method("switch_to_" + state_to_text[newstate]):
-			call("switch_to_" + state_to_text[newstate])
-		if state == STATE_NORMAL:
-			if newstate == STATE_ACTION:
-				pass
-		elif state == STATE_GRABKILL:
-			if newstate == STATE_GRABKILLED:
-				pass
-			elif newstate == STATE_ACTION:
-				pass
-		elif state == STATE_GRABKILLED:
-			if newstate == STATE_GRABKILL:
-				pass
-			elif newstate == STATE_ACTION:
-				pass
-		elif state == STATE_KO:
-			if newstate == STATE_ACTION:
-				pass
-		state = newstate
+	.switch_state(newstate)
 
 var bone_spatials = {}
 func add_bone_spatial(bone):
@@ -194,18 +122,14 @@ func add_bone_spatial(bone):
 	skel.add_child(sp)
 	skel.bind_child_node_to_bone(bone_t, sp)
 	bone_spatials[bone] = sp1
-var dbg
 func _ready():
-	dbg = get_node("../debug")
+#	._ready()
 	if has_node("man"):
 		gfx_root = "man"
 		female = false
 	else:
 		gfx_root = "woman"
 		female = true
-	set_can_sleep(false)
-	max_health = health
-	set_mode(self.MODE_CHARACTER)
 	down = get_node("down")
 	down.set_enabled(true)
 	if enemy:
@@ -244,12 +168,9 @@ func _ready():
 #	mesh.surface_set_material(0, mat)
 #	meshi.set_mesh(mesh)
 	anim.do_stop()
-	next_score = 10
 	old_pos = get_translation()
 	sight.set_enabled(true)
 	set_fixed_process(true)
-func _set_player(pl):
-	game_player = pl
 
 func do_attack(e, v):
 	if e != null:
@@ -257,15 +178,16 @@ func do_attack(e, v):
 		punch(e)
 	anim.do_punch()
 	attack=true
+func do_pair_state(c, st):
+	switch_state(st)
+	c.switch_state(state_pairs[st])
 func do_grabkill(c):
 	grabbed_ch = c
-	switch_state(STATE_GRABKILL)
-	c.switch_state(STATE_GRABKILLED)
-	c.set_mode(MODE_KINEMATIC)
+	do_pair_state(c, STATE_GRABKILL)
 	add_collision_exception_with(c)
 	c.add_collision_exception_with(self)
 	var pos = c.get_translation() - get_translation()
-	add_child(c)
+#	add_child(c)
 	c.set_translation(pos)
 #	get_parent().remove_child(c)
 	
@@ -291,8 +213,12 @@ func do_chase(delta):
 	var ppos = pt.origin
 	var npct = get_transform()
 	set_transform(npct.looking_at(ppos, upv))
-	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
-		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
+	if fear < strength:
+		if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
+			apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
+	elif (ppos - npct.origin).length() < 5:
+		if get_linear_velocity().length() < 8 + strength / 10 and !sight.is_colliding():
+			apply_impulse(Vector3(0.0, 0.0, 0.0), -(ppos - npct.origin).normalized() * 100 * delta + upv * 250 * delta)
 
 
 func npc_state_normal(delta):
@@ -375,11 +301,10 @@ func player_state_normal(delta):
 #					disable_grab = true
 			else:
 					disable_grab = false
-	elif dead:
-		if Input.is_action_pressed("pl_attack"):
-			health = max_health / 2
-			dead = false
-			ko = false
+
+func player_state_dead(delta):
+	if Input.is_action_pressed("pl_attack"):
+		resurrect()
 
 func player_state_ko(delta):
 	if immortal:
@@ -419,49 +344,35 @@ func player_state_grabkill(delta):
 
 
 var stop_delay = 0.0
-func run_state(delta):
-	var rf
-	if enemy:
-		rf = "enemy_state_" + state_to_text[state]
-	elif player:
-		rf = "player_state_" + state_to_text[state]
-	elif npc:
-		rf = "npc_state_" + state_to_text[state]
-	if has_method(rf):
-		call(rf, delta)
-	if state == STATE_NORMAL:
-		if attack:
-			attack = false
-		var rv = get_linear_velocity()
-		if rv.length() > 10:
-			set_linear_velocity(rv.normalized() * 6)
-		if can_move():
-			var newpos = get_translation()
-			var tv = newpos - old_pos
-			tv.y = 0
-			if tv.length() > 0.0:
-				anim.do_walk(tv.length() * 2.0)
-				stop_delay = 0.0
-			else:
-				stop_delay += delta
-			old_pos = newpos
-			if stop_delay > 0.1:
-				anim.do_stop()
-				stop_delay = 0.0
-		if score > next_score:
-			level = level + 1
-			next_score = next_score + pow(score, 2) / 50
-			max_health = max_health + 1
-			health = max_health
-			strength = strength + 1
+func common_state_normal(delta):
+	.common_state_normal(delta)
+	if attack:
+		attack = false
+	var rv = get_linear_velocity()
+	if rv.length() > 10:
+		set_linear_velocity(rv.normalized() * 6)
+	if can_move():
+		var newpos = get_translation()
+		var tv = newpos - old_pos
+		tv.y = 0
+		if tv.length() > 0.0:
+			anim.do_walk(tv.length() * 2.0)
+			stop_delay = 0.0
+		else:
+			stop_delay += delta
+		old_pos = newpos
+		if stop_delay > 0.1:
+			anim.do_stop()
+			stop_delay = 0.0
+
 func _fixed_process(delta):
 	var lv = get_linear_velocity()
 #	if sight.is_colliding():
 #		print(get_name(), " sight:", sight.is_colliding())
 #		print(sight.get_collider())
-	run_state(delta)
-	if is_sleeping():
-		set_sleeping(false)
+#	run_state(delta)
+#	if is_sleeping():
+#		set_sleeping(false)
 func set_follow(f):
 	if is_in_group("npc"):
 		print("Follow: ", get_name())
