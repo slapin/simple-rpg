@@ -12,8 +12,6 @@ var action
 var body
 var down
 var nv = Vector3(0.0, 0.0, 0.0)
-var upv = Vector3(0.0, 1.0, 0.0)
-var sight
 var anim
 var attack = false
 var skel
@@ -39,8 +37,9 @@ var pl_objects = {
 
 func switch_to_ko(st):
 	ko = true
-	anim.reset()
-	anim.do_ko()
+	if follow:
+		follow = false
+func switch_to_tripped(st):
 	if follow:
 		follow = false
 func switch_to_dead(st):
@@ -50,13 +49,17 @@ func switch_to_dead(st):
 var disable_grab = false
 var state_to_anim = {
 	STATE_NORMAL: {
+		STATE_KO: "do_ko",
 		STATE_GRABKILL: "do_grabkill",
 		STATE_GRABKILLED: "do_grabkilled",
+		STATE_TRIPPED: "do_ko",
 	},
 	STATE_GRABKILL: {
+		STATE_KO: "do_ko",
 		STATE_NORMAL: "do_stop",
 	},
 	STATE_GRABKILLED: {
+		STATE_KO: "do_ko",
 		STATE_NORMAL: "do_stop",
 	},
 	STATE_KO: {
@@ -65,6 +68,7 @@ var state_to_anim = {
 		STATE_GRABKILLED: "do_grabkilled",
 	},
 	STATE_ACTION: {
+		STATE_KO: "do_ko",
 		STATE_NORMAL: "do_stop",
 		STATE_GRABKILL: "do_grabkill",
 		STATE_GRABKILLED: "do_grabkilled",
@@ -140,7 +144,6 @@ func _ready():
 	add_to_group("characters")
 	anim = get_node("anim")
 	animp = get_node(pl_objects[gfx_root]["anim"])
-	sight = get_node("sight")
 	skel = get_node(pl_objects[gfx_root]["skel"])
 #	var meshi = get_node(pl_objects[gfx_root]["bottom_clothes"])
 #	var mesh = meshi.get_mesh().duplicate()
@@ -208,22 +211,6 @@ func enemy_to_npc():
 	npc = true
 	switch_state(STATE_NORMAL)
 var attack_delay = 0.0
-func do_chase(delta):
-	var pt = game_player.get_transform()
-	var ppos = pt.origin
-	var npct = get_transform()
-	set_transform(npct.looking_at(ppos, upv))
-	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
-		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
-
-func do_avoid(delta):
-	var pt = game_player.get_transform()
-	var ppos = pt.origin
-	var npct = get_transform()
-	set_transform(npct.looking_at(ppos, upv))
-	
-	if get_linear_velocity().length() < 15 + strength / 10 and (ppos - npct.origin).length() < 5:
-		apply_impulse(Vector3(0.0, 0.0, 0.0), -((ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta) * 4)
 
 
 func npc_state_normal(delta):

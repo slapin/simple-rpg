@@ -18,12 +18,17 @@ var game_player = null
 
 func _set_player(pl):
 	game_player = pl
+#for now, set all non-player
+#char attention to player
+# but later this can be changed individually
+	set_attention(pl)
 
 
 var dead = false
 var ko = false
 var npc = false
 var follow = false
+var chase = false
 
 const STATE_NORMAL = 0
 const STATE_GRABKILL = 1
@@ -31,7 +36,9 @@ const STATE_GRABKILLED = 2
 const STATE_KO = 3
 const STATE_ACTION = 4
 const STATE_DEAD = 5
+const STATE_TRIPPED = 5
 var state = STATE_NORMAL
+var attn_obj
 
 var state_to_text = {
 	STATE_NORMAL: "normal",
@@ -40,13 +47,19 @@ var state_to_text = {
 	STATE_KO: "ko",
 	STATE_ACTION: "action",
 	STATE_DEAD: "dead",
+	STATE_TRIPPED: "tripped",
 }
+
+const upv = Vector3(0.0, 1.0, 0.0)
+
+var sight
 
 func _ready():
 	print(get_filename() + " _ready")
 	max_health = health
 	next_score = 10
 	set_mode(self.MODE_CHARACTER)
+	sight = get_node("sight")
 	set_fixed_process(true)
 	set_process(true)
 
@@ -61,6 +74,28 @@ func common_state_normal(delta):
 		health = max_health
 		strength = strength + 1
 		fear = 0
+
+func set_attention(obj):
+	attn_obj = obj
+
+func do_avoid(delta):
+	var pt = attn_obj.get_transform()
+	var ppos = pt.origin
+	var npct = get_transform()
+	set_transform(npct.looking_at(ppos, upv))
+	
+	if get_linear_velocity().length() < 15 + strength / 10 and (ppos - npct.origin).length() < 5:
+		apply_impulse(Vector3(0.0, 0.0, 0.0), -((ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta) * 4)
+		if randi() % 100 == 3:
+			switch_state(STATE_TRIPPED)
+
+func do_chase(delta):
+	var pt = attn_obj.get_transform()
+	var ppos = pt.origin
+	var npct = get_transform()
+	set_transform(npct.looking_at(ppos, upv))
+	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
+		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
 
 
 func switch_state(newstate):

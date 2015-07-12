@@ -10,12 +10,14 @@ func _ready():
 	connect("body_enter", self, "_enter")
 	connect("body_exit", self, "_exit")
 	set_process(true)
-
+# bugs with constants
+const STATE_ACTION = 4
+const STATE_NORMAL = 0
 func _enter(body):
 	if body.is_in_group("npc"):
 		bodies_in.append(body)
-		body.switch_state(body.STATE_ACTION)
-		body.look_at_from_pos(get_global_transform().origin, get_global_transform().basis[2] * 10, Vector3(0.0, 0.0, 0.0))
+		body.switch_state(4)
+		body.look_at_from_pos(get_transform().origin, get_global_transform().basis[2] * 10, Vector3(0.0, 0.0, 0.0))
 func _exit(body):
 	if body.is_in_group("npc"):
 		bodies_in.append(body)
