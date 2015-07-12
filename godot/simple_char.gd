@@ -82,9 +82,7 @@ func run_state(delta):
 		rf = "player_state_" + state_to_text[state]
 	elif npc:
 		rf = "npc_state_" + state_to_text[state]
-	print("wanna call: " +rf)
 	if has_method(rf):
-		print("calling " + rf)
 		call(rf, delta)
 	rf = "common_state_" + state_to_text[state]
 	if has_method(rf):
@@ -116,15 +114,24 @@ func punched(c, dam):
 		health = 0
 		dead = true
 		switch_state(STATE_DEAD)
-	fear += damage / strength
+	if c.health > health:
+		fear += (damage + (c.health - health)) / strength + 1
+	else:
+		fear += damage  / strength + 1
 	hate += randi() % ((damage + fear) / strength + 1)
+	if npc:
+		fear += (strength + c.strength) * 2
+		hate += damage / 10
 	
 	if player:
 		get_tree().call_group(0, "gui", "set_health", health)
 
 func punch(c):
-	c.punched(self, randi() % strength + strength / (10 + fear))
-	score += 1
+	if !c.dead:
+		c.punched(self, randi() % strength + strength / (10 + fear))
+		score += 1
+		if c.dead:
+			score += (c.strength * c.level) / (level + 1) + 1
 
 func resurrect():
 	health = max_health / 2

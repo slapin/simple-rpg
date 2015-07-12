@@ -213,12 +213,17 @@ func do_chase(delta):
 	var ppos = pt.origin
 	var npct = get_transform()
 	set_transform(npct.looking_at(ppos, upv))
-	if fear < strength:
-		if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
-			apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
-	elif (ppos - npct.origin).length() < 5:
-		if get_linear_velocity().length() < 8 + strength / 10 and !sight.is_colliding():
-			apply_impulse(Vector3(0.0, 0.0, 0.0), -(ppos - npct.origin).normalized() * 100 * delta + upv * 250 * delta)
+	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
+		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
+
+func do_avoid(delta):
+	var pt = game_player.get_transform()
+	var ppos = pt.origin
+	var npct = get_transform()
+	set_transform(npct.looking_at(ppos, upv))
+	
+	if get_linear_velocity().length() < 15 + strength / 10 and (ppos - npct.origin).length() < 5:
+		apply_impulse(Vector3(0.0, 0.0, 0.0), -((ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta) * 4)
 
 
 func npc_state_normal(delta):
@@ -232,6 +237,8 @@ func npc_state_normal(delta):
 						c.apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2] * c.get_mass() * 2 + Vector3(0.0, 1.5, 0.0))
 					elif c.is_in_group("enemies"):
 						c.do_attack(c, 60)
+		elif fear > strength:
+			do_avoid(delta)
 func npc_state_ko(delta):
 	if follow:
 		ko = false
@@ -240,7 +247,7 @@ func npc_state_grabkill(delta):
 func npc_state_grabkilled(delta):
 	anim.do_grabkilled()
 func enemy_state_normal(delta):
-	if game_player != null and can_move():
+	if game_player != null and can_move() and fear < strength:
 		do_chase(delta)
 		if !attack_delay > 0.0:
 			if sight.is_colliding():
@@ -254,6 +261,8 @@ func enemy_state_normal(delta):
 				attack_delay = 1.0
 		else:
 			attack_delay -= delta
+	elif game_player != null and can_move():
+		do_avoid(delta)
 func enemy_state_ko(delta):
 	pass
 func enemy_state_grabkill(delta):
@@ -266,7 +275,7 @@ func player_state_normal(delta):
 	if can_move():
 		if game_player == null:
 			game_player = self
-			get_tree().call_group(0, "enemies", "_set_player", self)
+			get_tree().call_group(0, "characters", "_set_player", self)
 		var r = get_transform()
 		if down.is_colliding() or get_linear_velocity().y <= 0.001:
 			if Input.is_action_pressed("pl_left"):
