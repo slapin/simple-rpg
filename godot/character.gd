@@ -21,6 +21,8 @@ var damage_const = 16
 var wrist_L_t
 var wrist_R_t
 var head_t
+var bodycol
+var bodycol_t
 
 var pl_objects = {
 	"man": {
@@ -87,6 +89,15 @@ func switch_to_normal(st):
 			disable_grab = true
 	elif st == STATE_GRABKILLED:
 		set_mode(MODE_CHARACTER)
+	if bodycol != null:
+		add_shape(bodycol, bodycol_t)
+
+func switch_from_normal(st):
+	var hh
+	for hh in range(0, get_shape_count()):
+		var hn = get_shape(hh)
+		if hn.get_name() == "bodycol":
+			remove_shape(hh)
 
 func switch_from_ko(st):
 	ko = false
@@ -172,6 +183,14 @@ func _ready():
 #	meshi.set_mesh(mesh)
 	anim.do_stop()
 	old_pos = get_translation()
+	
+	var sc = get_shape_count()
+	var hc
+	for hc in range(0, sc):
+		var sh = get_shape(hc)
+		if sh.get_name() == "bodycol":
+			bodycol = sh
+			bodycol_t = get_shape_transform(hc)
 	sight.set_enabled(true)
 	set_fixed_process(true)
 
