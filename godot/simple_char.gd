@@ -36,7 +36,7 @@ const STATE_GRABKILLED = 2
 const STATE_KO = 3
 const STATE_ACTION = 4
 const STATE_DEAD = 5
-const STATE_TRIPPED = 5
+const STATE_TRIPPED = 6
 var state = STATE_NORMAL
 var attn_obj
 
@@ -48,6 +48,16 @@ var state_to_text = {
 	STATE_ACTION: "action",
 	STATE_DEAD: "dead",
 	STATE_TRIPPED: "tripped",
+}
+
+var text_to_state = {
+	"normal": STATE_NORMAL,
+	"grabkill": STATE_GRABKILL,
+	"grabkilled": STATE_GRABKILLED,
+	"ko": STATE_KO,
+	"action": STATE_ACTION,
+	"dead": STATE_DEAD,
+	"tripped": STATE_TRIPPED,
 }
 
 const upv = Vector3(0.0, 1.0, 0.0)
@@ -99,6 +109,8 @@ func do_chase(delta):
 
 
 func switch_state(newstate):
+	if typeof(newstate) == TYPE_STRING:
+		newstate = text_to_state[newstate]
 	if newstate != state:
 		if has_method(state_to_text[state] + "_to_" + state_to_text[newstate]):
 			call(state_to_text[state] + "_to_" + state_to_text[newstate])
@@ -160,6 +172,8 @@ func punched(c, dam):
 	
 	if player:
 		get_tree().call_group(0, "gui", "set_health", health)
+	if dead:
+		print("DEAD")
 
 func punch(c):
 	if !c.dead:

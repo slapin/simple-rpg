@@ -64,6 +64,7 @@ func _ready():
 	
 	set_process(true)
 var running = true
+var bus_pos = Vector3(0.0, 0.0, 0.0)
 func _process(delta):
 	if running:
 		if bus.get_brake() <= 0.0:
@@ -72,7 +73,5 @@ func _process(delta):
 			bus.set_engine_force(0.0)
 			bus.set_brake(100.0)
 			running = false
-	
-	
-
-
+	if (bus_pos - bus.get_translation()).length() < 0.1:
+		bus.set_brake(0.0)

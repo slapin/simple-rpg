@@ -117,6 +117,8 @@ func switch_from_grabkilled(st):
 	set_mode(MODE_CHARACTER)
 
 func switch_state(newstate):
+	if typeof(newstate) == TYPE_STRING:
+		newstate = text_to_state[newstate]
 	if newstate != state:
 		if state_to_anim.has(state):
 			if state_to_anim[state].has(newstate):
@@ -191,8 +193,22 @@ func _ready():
 		if sh.get_name() == "bodycol":
 			bodycol = sh
 			bodycol_t = get_shape_transform(hc)
+	connect("body_enter", self, "_enter_col")
+	connect("body_exit", self, "_exit_col")
 	sight.set_enabled(true)
 	set_fixed_process(true)
+
+var colliders = []
+
+func _enter_col(body):
+	if body.is_in_group("characters"):
+		colliders.append(body)
+		print("see ", body.get_name())
+func _exit_col(body):
+	if body.is_in_group("characters"):
+		colliders.erase(body)
+		print("leave ", body.get_name())
+
 
 func do_attack(e, v):
 	if e != null:
@@ -231,18 +247,23 @@ func enemy_to_npc():
 	switch_state(STATE_NORMAL)
 var attack_delay = 0.0
 
+func npc_attack_body(body):
+	if body.is_in_group("characters"):
+		if !body.can_move():
+			body.apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2] * body.get_mass() * 2 + Vector3(0.0, 1.5, 0.0))
+		elif body.is_in_group("enemies"):
+			do_attack(body, 60)
 
 func npc_state_normal(delta):
 	if game_player != null and can_move():
 		if follow:
+			var c
 			do_chase(delta)
 			if sight.is_colliding():
-				var c = sight.get_collider()
-				if c.is_in_group("characters"):
-					if !c.can_move():
-						c.apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2] * c.get_mass() * 2 + Vector3(0.0, 1.5, 0.0))
-					elif c.is_in_group("enemies"):
-						c.do_attack(c, 60)
+				c = sight.get_collider()
+				npc_attack_body(c)
+			for c in colliders:
+				npc_attack_body(c)
 		elif fear > strength:
 			do_avoid(delta)
 func npc_state_ko(delta):
@@ -252,18 +273,25 @@ func npc_state_grabkill(delta):
 	anim.do_grabkill()
 func npc_state_grabkilled(delta):
 	anim.do_grabkilled()
+func enemy_attack_body(body):
+	if body.is_in_group("enemies"):
+		if randi() % 10 > 1:
+			do_attack(body, 300)
+			coltrig = true
+	elif body.is_in_group("characters"):
+		do_attack(body, 600)
 func enemy_state_normal(delta):
 	if game_player != null and can_move() and fear < strength:
 		do_chase(delta)
 		if !attack_delay > 0.0:
+			var c
 			if sight.is_colliding():
-				var c = sight.get_collider()
-				if c.is_in_group("enemies"):
-					if randi() % 10 > 1:
-						do_attack(c, 300)
-						coltrig = true
-				elif c.is_in_group("characters"):
-					do_attack(c, 600)
+				c = sight.get_collider()
+				enemy_attack_body(c)
+				attack_delay = 1.0
+			if colliders.size() > 0:
+				for c in colliders:
+					enemy_attack_body(c)
 				attack_delay = 1.0
 		else:
 			attack_delay -= delta
@@ -297,10 +325,14 @@ func player_state_normal(delta):
 				apply_impulse(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 200.0, 0.0))
 			if Input.is_action_pressed("pl_attack"):
 				attack = true
+				var f
 				if sight.is_colliding():
-					var f = sight.get_collider()
+					f = sight.get_collider()
 					if f.is_in_group("characters"):
-						do_attack(f, 20)
+						do_attack(f, strength + randi() % strength)
+				elif colliders.size() > 0:
+					for f in colliders:
+						do_attack(f, strength + randi() % strength)
 				else:
 						do_attack(null, 0)
 			if Input.is_action_pressed("pl_grab"):
