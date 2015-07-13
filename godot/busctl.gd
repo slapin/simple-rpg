@@ -22,22 +22,22 @@ func _ready():
 	wheel2 = get_node("bus/bus/wheel2")
 	wheel3 = get_node("bus/bus/wheel3")
 	wheel4 = get_node("bus/bus/wheel4")
-	wheel1.set_suspension_stiffness(15000.0)
-	wheel1.set_suspension_max_force(12000)
+	wheel1.set_suspension_stiffness(20000.0)
+	wheel1.set_suspension_max_force(10000)
 	wheel1.set_suspension_travel(2.0)
 	wheel1.set_use_as_traction(true)
 	wheel1.set_use_as_steering(true)
 	wheel2.set_suspension_travel(2.0)
-	wheel2.set_suspension_stiffness(15000.0)
-	wheel2.set_suspension_max_force(12000)
+	wheel2.set_suspension_stiffness(20000.0)
+	wheel2.set_suspension_max_force(10000)
 	wheel2.set_use_as_traction(true)
-	wheel3.set_suspension_stiffness(15000.0)
-	wheel3.set_suspension_max_force(12000)
+	wheel3.set_suspension_stiffness(20000.0)
+	wheel3.set_suspension_max_force(10000)
 	wheel3.set_suspension_travel(2.0)
 	wheel3.set_use_as_traction(true)
 	wheel3.set_use_as_steering(true)
-	wheel4.set_suspension_stiffness(15000.0)
-	wheel4.set_suspension_max_force(12000)
+	wheel4.set_suspension_stiffness(20000.0)
+	wheel4.set_suspension_max_force(10000)
 	wheel4.set_suspension_travel(2.0)
 	wheel4.set_use_as_traction(true)
 	var t
@@ -61,11 +61,17 @@ func _ready():
 		bus.add_shape(sh, t.rotated(Vector3(0.0, 1.0, 0.0), PI))
 	buscol.get_parent().remove_child(buscol)
 	buscol.queue_free()
-
 	
 	set_process(true)
+var running = true
 func _process(delta):
-	bus.set_engine_force(randf() * 5000)
+	if running:
+		if bus.get_brake() <= 0.0:
+			bus.set_engine_force(randf() * 5000)
+		else:
+			bus.set_engine_force(0.0)
+			bus.set_brake(100.0)
+			running = false
 	
 	
 
