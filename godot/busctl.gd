@@ -14,9 +14,14 @@ var wheel4
 var door1
 var door2
 var door3
+var sound
 
 func _ready():
+	sound = get_node("bus_sound")
 	bus = get_node("bus/bus")
+	sound.get_parent().remove_child(sound)
+	bus.add_child(sound)
+	sound.play("engine_sound")
 	buscol = get_node("buscol")
 	wheel1 = get_node("bus/bus/wheel1")
 	wheel2 = get_node("bus/bus/wheel2")
