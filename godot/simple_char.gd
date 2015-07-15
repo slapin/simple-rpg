@@ -27,6 +27,7 @@ func _set_player(pl):
 var dead = false
 var ko = false
 var npc = false
+var tripped = false
 var follow = false
 var chase = false
 
@@ -103,7 +104,9 @@ func do_chase(delta):
 	var pt = attn_obj.get_transform()
 	var ppos = pt.origin
 	var npct = get_transform()
-	set_transform(npct.looking_at(ppos, upv))
+# we really don't want to rotate whole character
+# body in direction of player
+	set_transform(npct.looking_at(Vector3(ppos.x, npct.origin.y, ppos.z), upv))
 	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
 		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
 
@@ -140,7 +143,7 @@ func _fixed_process(delta):
 		set_sleeping(false)
 
 func can_move():
-	if not ko and not dead:
+	if not ko and not dead and not tripped:
 		return true
 	else:
 		return false
@@ -186,4 +189,5 @@ func resurrect():
 	health = max_health / 2
 	ko = false
 	dead = false
+	tripped = false
 	switch_state(STATE_NORMAL)

@@ -42,6 +42,7 @@ func switch_to_ko(st):
 	if follow:
 		follow = false
 func switch_to_tripped(st):
+	tripped = true
 	if follow:
 		follow = false
 func switch_to_dead(st):
@@ -101,6 +102,9 @@ func switch_from_normal(st):
 
 func switch_from_ko(st):
 	ko = false
+
+func switch_from_tripped(st):
+	tripped = false
 
 func switch_to_action(st):
 	anim.do_stop()
@@ -208,6 +212,10 @@ func _exit_col(body):
 	if body.is_in_group("characters"):
 		colliders.erase(body)
 		print("leave ", body.get_name())
+		if orders_enabled:
+			get_tree().call_group(0, "gui", "hide_orders", body)
+			orders_enabled = false
+#		print("NO ORDERS")
 
 
 func do_attack(e, v):
@@ -337,7 +345,7 @@ func player_state_normal(delta):
 						do_attack(null, 0)
 			if Input.is_action_pressed("pl_grab"):
 				if not disable_grab:
-					sight.process_orders(self)
+					sight_process_orders(self)
 #				if not disable_grab:
 #					if sight.is_colliding() and grab_delay <= 0.0:
 #						var f = sight.get_collider()
@@ -430,4 +438,34 @@ func set_follow(f):
 			switch_state(STATE_NORMAL)
 			follow = f
 			print("following ko")
-			
+
+var orders_enabled = false
+func sight_process_orders(pl):
+	var ifcol = sight.is_colliding() or colliders.size() > 0
+	var collider = null
+	if sight.is_colliding():
+		collider = sight.get_collider()
+		if !collider.is_in_group("characters"):
+			collider = null
+			ifcol = false
+	elif colliders.size() > 0:
+		collider = colliders[0]
+	if !ifcol and orders_enabled == false:
+		return
+	elif !ifcol and orders_enabled == true:
+		orders_enabled = false
+	if collider == null:
+		return
+
+	var forceable = !collider.can_move() || collider.npc
+	if ifcol and not orders_enabled:
+		print("COL ", forceable, " ", collider.ko, collider.state)
+		if forceable:
+			get_tree().call_group(0, "gui", "show_orders", collider)
+			orders_enabled = true
+			print("ORDERS")
+#need to disable per-char menus on lose of contact
+#	elif !ifcol:
+#		get_tree().call_group(0, "gui", "hide_orders", sight.get_collider())
+#		orders_enabled = false
+#		print("NO ORDERS")
