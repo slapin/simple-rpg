@@ -5,8 +5,8 @@
 		<author> Anonymous </author>
 		<authoring_tool> Collada Exporter for Blender 2.6+, by Juan Linietsky (juan@codenix.com) </authoring_tool>
 	</contributor>
-	<created>2015-07-15T19:21:51Z     </created>
-	<modified>2015-07-15T19:21:51Z</modified>
+	<created>2015-07-15T21:47:30Z     </created>
+	<modified>2015-07-15T21:47:30Z</modified>
 	<unit meter="1.0" name="meter"/>
 	<up_axis>Z_UP</up_axis>
 </asset>
@@ -108,7 +108,7 @@
 						<color>  1.0 1.0 1.0 1.0 </color>
 					</reflective>
 					<transparency>
-						<float>0.33812952041625977</float>
+						<float>0.20000000298023224</float>
 					</transparency>
 					<index_of_refraction>
 						<float>4.0</float>
