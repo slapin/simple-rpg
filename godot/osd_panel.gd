@@ -29,8 +29,11 @@ func _ready():
 func set_health(health):
 	health_data.set_text(str(health))
 
+var prev_fps = 0.0
 func _process(delta):
-	fps_data.set_text(str(OS.get_frames_per_second()))
+	var fps = (prev_fps + OS.get_frames_per_second()) / 2.0
+	fps_data.set_text(str(int(fps)))
+	prev_fps = fps
 
 func _order(id):
 	print("selected item: ", id)
