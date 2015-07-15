@@ -319,7 +319,9 @@ func player_state_normal(delta):
 			game_player = self
 			get_tree().call_group(0, "characters", "_set_player", self)
 		var r = get_transform()
-		if down.is_colliding() or get_linear_velocity().y <= 0.001:
+		var lv = get_linear_velocity()
+		if down.is_colliding() or (lv.y <= 0.001 and lv.y >= -0.001):
+			print("down: ", down.is_colliding())
 			if Input.is_action_pressed("pl_left"):
 				set_transform(r.rotated(Vector3(0.0, 1.0, 0.0), -0.1))
 			if Input.is_action_pressed("pl_right"):
@@ -330,7 +332,7 @@ func player_state_normal(delta):
 			else:
 				set_linear_velocity(get_linear_velocity() / 1.2)
 			if Input.is_action_pressed("pl_jump"):
-				apply_impulse(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 200.0, 0.0))
+				apply_impulse(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 120.0, 0.0))
 			if Input.is_action_pressed("pl_attack"):
 				attack = true
 				var f
