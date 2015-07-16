@@ -321,7 +321,6 @@ func player_state_normal(delta):
 		var r = get_transform()
 		var lv = get_linear_velocity()
 		if down.is_colliding() or (lv.y <= 0.001 and lv.y >= -0.001):
-			print("down: ", down.is_colliding())
 			if Input.is_action_pressed("pl_left"):
 				set_transform(r.rotated(Vector3(0.0, 1.0, 0.0), -0.1))
 			if Input.is_action_pressed("pl_right"):
