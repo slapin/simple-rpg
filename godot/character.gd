@@ -86,8 +86,6 @@ func switch_to_normal(st):
 	if st == STATE_GRABKILL:
 		grabbed_ch.remove_collision_exception_with(self)
 		remove_collision_exception_with(grabbed_ch)
-		if Input.is_action_pressed("pl_grab"):
-			disable_grab = true
 	elif st == STATE_GRABKILLED:
 		set_mode(MODE_CHARACTER)
 	if bodycol != null:
@@ -143,6 +141,7 @@ func add_bone_spatial(bone):
 	skel.add_child(sp)
 	skel.bind_child_node_to_bone(bone_t, sp)
 	bone_spatials[bone] = sp1
+var old_pos
 func _ready():
 #	._ready()
 	if has_node("man"):
@@ -162,6 +161,7 @@ func _ready():
 	anim = get_node("anim")
 	animp = get_node(pl_objects[gfx_root]["anim"])
 	skel = get_node(pl_objects[gfx_root]["skel"])
+	animp.set_animation_process_mode(animp.ANIMATION_PROCESS_FIXED)
 #	var meshi = get_node(pl_objects[gfx_root]["bottom_clothes"])
 #	var mesh = meshi.get_mesh().duplicate()
 	wrist_L_t = skel.find_bone("wrist_L")
@@ -177,7 +177,6 @@ func _ready():
 	var hip_colb = bone_spatials["spine05"]
 	var col = SphereShape.new()
 	col.set_radius(0.3)
-	hip_colb.add_child(col)
 	add_shape(col)
 #	var head_tr = skel.get_bone_global_pose(head_t).origin
 #	tc.set_translation(head_tr)
@@ -233,20 +232,8 @@ func do_grabkill(c):
 	add_collision_exception_with(c)
 	c.add_collision_exception_with(self)
 	var pos = c.get_translation() - get_translation()
-#	add_child(c)
 	c.set_translation(pos)
-#	get_parent().remove_child(c)
 	
-func npc_follow(p):
-	if !follow:
-		apply_impulse(Vector3(0.0, 0.0, 0.0), p.get_global_transform().basis[2] * 2)
-		follow = true
-		_set_player(p)
-func do_npc_follow(e):
-	if ! e.follow:
-		e.apply_impulse(Vector3(0.0, 0.0, 0.0), get_global_transform().basis[2] * 2)
-		e.follow = true
-		e._set_player(self)
 func enemy_to_npc():
 	enemy = false
 	add_to_group("npc")
@@ -255,32 +242,6 @@ func enemy_to_npc():
 	switch_state(STATE_NORMAL)
 var attack_delay = 0.0
 
-func npc_attack_body(body):
-	if body.is_in_group("characters"):
-		if !body.can_move():
-			body.apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2] * body.get_mass() * 2 + Vector3(0.0, 1.5, 0.0))
-		elif body.is_in_group("enemies"):
-			do_attack(body, 60)
-
-func npc_state_normal(delta):
-	if game_player != null and can_move():
-		if follow:
-			var c
-			do_chase(delta)
-			if sight.is_colliding():
-				c = sight.get_collider()
-				npc_attack_body(c)
-			for c in colliders:
-				npc_attack_body(c)
-		elif fear > strength:
-			do_avoid(delta)
-func npc_state_ko(delta):
-	if follow:
-		ko = false
-func npc_state_grabkill(delta):
-	anim.do_grabkill()
-func npc_state_grabkilled(delta):
-	anim.do_grabkilled()
 func enemy_attack_body(body):
 	if body.is_in_group("enemies"):
 		if randi() % 10 > 1:
@@ -313,92 +274,6 @@ func enemy_state_grabkilled(delta):
 	anim.do_grabkilled()
 #var grab_delay = 0.0
 var ord_enabled = false
-func player_state_normal(delta):
-	if can_move():
-		if game_player == null:
-			game_player = self
-			get_tree().call_group(0, "characters", "_set_player", self)
-		var r = get_transform()
-		var lv = get_linear_velocity()
-		if down.is_colliding() or (lv.y <= 0.001 and lv.y >= -0.001):
-			if Input.is_action_pressed("pl_left"):
-				set_transform(r.rotated(Vector3(0.0, 1.0, 0.0), -0.1))
-			if Input.is_action_pressed("pl_right"):
-				set_transform(r.rotated(Vector3(0.0, 1.0, 0.0), 0.1))
-			if Input.is_action_pressed("pl_forward"):
-				if get_linear_velocity().length() < 10:
-					apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2]* get_mass() + Vector3(0.0, 2.5, 0.0))
-			else:
-				set_linear_velocity(get_linear_velocity() / 1.2)
-			if Input.is_action_pressed("pl_jump"):
-				apply_impulse(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 120.0, 0.0))
-			if Input.is_action_pressed("pl_attack"):
-				attack = true
-				var f
-				if sight.is_colliding():
-					f = sight.get_collider()
-					if f.is_in_group("characters"):
-						do_attack(f, strength + randi() % strength)
-				elif colliders.size() > 0:
-					for f in colliders:
-						do_attack(f, strength + randi() % strength)
-				else:
-						do_attack(null, 0)
-			if Input.is_action_pressed("pl_grab"):
-				if not disable_grab:
-					sight_process_orders(self)
-#				if not disable_grab:
-#					if sight.is_colliding() and grab_delay <= 0.0:
-#						var f = sight.get_collider()
-#						if f.is_in_group("npc"):
-#							do_grab(f)
-#						if f.is_in_group("enemies"):
-#							do_grab(f)
-#					disable_grab = true
-			else:
-					disable_grab = false
-
-func player_state_dead(delta):
-	if Input.is_action_pressed("pl_attack"):
-		resurrect()
-
-func player_state_ko(delta):
-	if immortal:
-		switch_state(STATE_NORMAL)
-
-var old_pos
-func player_state_grabkill(delta):
-	anim.do_grabkill()
-	if Input.is_action_pressed("pl_grab"):
-		if not disable_grab:
-			switch_state(STATE_NORMAL)
-			grabbed_ch.switch_state(STATE_NORMAL)
-			disable_grab = true
-	else:
-		disable_grab = false
-	var trz = grabbed_ch.get_transform()
-	var p = get_transform().origin
-	var h = get_transform().basis[2]
-	grabbed_ch.set_linear_velocity(Vector3(0.0, 0.0, 0.0))
-	set_linear_velocity(Vector3(0.0, 0.0, 0.0))
-	grabbed_ch.look_at_from_pos(p, p + h * 10, Vector3(0.0, 1.0, 0.0))
-	var offt = hand_target.get_global_transform().origin - grabbed_ch.neck_target.get_global_transform().origin
-	var ppos = get_global_transform()
-	# offsetting the animation off hand a bit
-	offt += ppos.basis[0] * (-0.05)
-	offt += ppos.basis[2] * (-0.07)
-	grabbed_ch.look_at_from_pos(p + offt, Vector3(p.x, p.y + offt.y, p.z), Vector3(0.0, 1.0, 0.0))
-	look_at(p - h * 10, Vector3(0.0, 1.0, 0.0))
-	var r = get_transform()
-	if Input.is_action_pressed("pl_left"):
-		set_transform(r.rotated(Vector3(0.0, 1.0, 0.0), -0.1))
-	if Input.is_action_pressed("pl_right"):
-		set_transform(r.rotated(Vector3(0.0, 1.0, 0.0), 0.1))
-	if Input.is_action_pressed("pl_forward"):
-		if get_linear_velocity().length() < 10:
-			apply_impulse(Vector3(0.0, 0.0, 0.0), -get_transform().basis[2]* get_mass() * 10 + Vector3(0.0, 2.5, 0.0) * 3)
-
-
 var stop_delay = 0.0
 func common_state_normal(delta):
 	.common_state_normal(delta)

@@ -66,11 +66,14 @@ const upv = Vector3(0.0, 1.0, 0.0)
 var sight
 
 func _ready():
+	if not enemy and not player:
+		npc = true
 	print(get_filename() + " _ready")
 	max_health = health
 	next_score = 10
 	set_mode(self.MODE_CHARACTER)
 	sight = get_node("sight")
+	setup_states()
 	set_fixed_process(true)
 	set_process(true)
 
@@ -110,6 +113,24 @@ func do_chase(delta):
 	if get_linear_velocity().length() < 40 + strength / 10 and !sight.is_colliding():
 		apply_impulse(Vector3(0.0, 0.0, 0.0), (ppos - npct.origin).normalized() * 500 * delta + upv * 250 * delta)
 
+var run_state_methods1 = {}
+var run_state_methods2 = {}
+func setup_states():
+	for g in text_to_state.keys():
+		var rf
+		if enemy:
+			rf = "enemy_state_" + g
+		elif player:
+			rf = "player_state_" + g
+		elif npc:
+			rf = "npc_state_" + g
+		if has_method(rf):
+			run_state_methods1[g] = rf
+		rf = "common_state_" + g
+		if has_method(rf):
+			run_state_methods2[g] = rf
+	print(get_name(), ":", run_state_methods1)
+	print(get_name(), ":", run_state_methods2)
 
 func switch_state(newstate):
 	if typeof(newstate) == TYPE_STRING:
@@ -122,25 +143,19 @@ func switch_state(newstate):
 		if has_method("switch_to_" + state_to_text[newstate]):
 			call("switch_to_" + state_to_text[newstate], state)
 		state = newstate
+		print(get_name() + ": state=" + state_to_text[state])
 
 
 func run_state(delta):
-	var rf
-	if enemy:
-		rf = "enemy_state_" + state_to_text[state]
-	elif player:
-		rf = "player_state_" + state_to_text[state]
-	elif npc:
-		rf = "npc_state_" + state_to_text[state]
-	if has_method(rf):
-		call(rf, delta)
-	rf = "common_state_" + state_to_text[state]
-	if has_method(rf):
-		call(rf, delta)
+	if run_state_methods1.has(state_to_text[state]):
+		call(run_state_methods1[state_to_text[state]], delta)
+	if run_state_methods2.has(state_to_text[state]):
+		call(run_state_methods2[state_to_text[state]], delta)
 func _fixed_process(delta):
 	run_state(delta)
-	if is_sleeping():
-		set_sleeping(false)
+	if follow || player:
+		if is_sleeping():
+			set_sleeping(false)
 
 func can_move():
 	if not ko and not dead and not tripped:

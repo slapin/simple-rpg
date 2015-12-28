@@ -33,7 +33,7 @@ func switch_anim(anim, sc=1.0):
 			punch_delay = punch_time
 			var anim = animation_node_get_animation("punch_anim")
 			anim.set_loop(true)
-			animation_node_set_animation("punch_anim", anim)
+#			animation_node_set_animation("punch_anim", anim)
 		elif anim == ANIM_WALK:
 #			timescale_node_set_scale("walk_scale", sc / (walk_scale + walk_scale_add))
 			timescale_node_set_scale("walk_scale", sc * 19.0)
@@ -68,6 +68,9 @@ var walk_scale_add
 func _ready():
 	switch_anim(ANIM_STOP)
 	walk_scale_add = 0.0
+#	var anim = animation_node_get_animation("punch_anim")
+#	anim.set_loop(true)
+#	animation_node_set_animation("punch_anim", anim)
 	set_active(true)
 	set_fixed_process(true)
 func do_ko():
