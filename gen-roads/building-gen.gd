@@ -5,10 +5,10 @@ extends Spatial
 # var a=2
 # var b="textvar"
 
-var n_floors = 9
+var n_floors = 2
 var floor_grid = []
-var building_width = 40
-var building_depth = 45
+var building_width = 60
+var building_depth = 75
 var entry_door
 
 const grid_item = 0.5
@@ -17,6 +17,198 @@ const OUTER_WALL = 1000
 const CORRIDOOR = 1001
 const ENTRY = 1002
 const ENTRY_DOOR = 1003
+
+class Map:
+	var fl_map
+	var fl_width
+	var fl_depth
+	var room_data = {}
+	func _init(w, h):
+		fl_map = []
+		for k in range(h):
+			fl_map.append([])
+			for l in range(w):
+				fl_map[k].append(0)
+		fl_width = w
+		fl_depth = h
+	func get_map():
+		return fl_map
+	func size():
+		return Vector2(fl_width, fl_depth)
+	func setup_outer_walls():
+		for k in [0, fl_depth - 1]:
+			for l in range(1, fl_width - 1):
+				fl_map[k][l] = OUTER_WALL
+		for k in range(0, fl_depth):
+			for l in [0, fl_width - 1]:
+				fl_map[k][l] = OUTER_WALL
+	func grow_room_rect(id):
+		var min_x = fl_width
+		var max_x = -1
+		var min_y = fl_depth
+		var max_y = -1
+		for k in range(fl_map.size()):
+			for l in range(fl_map[k].size()):
+				if fl_map[k][l] == id:
+					if min_x > l:
+						min_x = l
+					if max_x < l:
+						max_x = l
+					if min_y > k:
+						min_y = k
+					if max_y < k:
+						max_y = k
+		var start_x = clamp(min_x - 1, 0, fl_width - 1)
+		var end_x = clamp(max_x + 1, 0, fl_width - 1)
+		var start_y = clamp(min_y - 1, 0, fl_depth - 1)
+		var end_y = clamp(max_y + 1, 0, fl_depth - 1)
+		var can_grow_top = true
+		var can_grow_bottom = true
+		var can_grow_left = true
+		var can_grow_right = true
+		for k in range(start_x, end_x + 1):
+			var h = fl_map[start_y][k]
+			if h != id and h != 0:
+				start_y = clamp(min_y, 0, fl_depth)
+				can_grow_top = false
+				break
+		for k in range(start_x, end_x + 1):
+			var h = fl_map[end_y][k]
+			if h != id and h != 0:
+				end_y = clamp(max_y, 0, fl_depth)
+				can_grow_bottom = false
+				break
+		for k in range(start_y, end_y + 1):
+			var h = fl_map[k][start_x]
+			if h != id and h != 0:
+				start_x = clamp(min_x, 0, fl_width)
+				can_grow_left = false
+				break
+		for k in range(start_y, end_y + 1):
+			var h = fl_map[k][end_x]
+			if h != id and h != 0:
+				end_x = clamp(max_x, 0, fl_width)
+				can_grow_right = false
+				break
+		for k in range(start_y, end_y + 1):
+			for l in range(start_x, end_x + 1):
+				fl_map[k][l] = id
+		for k in [can_grow_top, can_grow_bottom, can_grow_left, can_grow_right]:
+			if k:
+				return true
+		return false
+	func copy_id(id, obj):
+		var v = obj.get_map()
+		for k in range(v.size()):
+			for l in range(v[k].size()):
+				if k < fl_depth and l < fl_width and v[k][l] == id:
+					if fl_map[k][l] == 0:
+						fl_map[k][l] = id
+	func grow_entry():
+		for k in range(10 + randi() % 10):
+			grow_room_rect(ENTRY)
+	func spawn_appartment(id):
+		var sz = size()
+		var px = Vector2()
+		while true:
+			px.x = 10 + (randi() % (int((fl_width - 20) / 10))) * 10
+			px.y = 10 + (randi() % (int((fl_depth - 20) / 10))) * 10
+			if not fl_map[px.y][px.x] == 0:
+				continue
+			else:
+				fl_map[px.y][px.x] = id
+				break
+		add_room(id, int(px.x), int(px.y))
+	func find_edge_x(id, k, t, l1, l2, lstep):
+		var state = 0
+		var edges = []
+		var prev = [l1, k, fl_map[k][l1]]
+		for l in range(l1, l2, lstep):
+			if state == 0:
+				if fl_map[k][l] == id:
+					prev = [l, k, fl_map[k][l]]
+					state = 1
+			elif state == 1:
+				if fl_map[k][l] != id:
+					state = 0
+					edges.append([t, prev, [l, k, fl_map[k][l]]])
+				else:
+					prev = [l, k, fl_map[k][l]]
+		return edges
+	func find_edge_y(id, l, t, k1, k2, kstep):
+		var state = 0
+		var edges = []
+		var prev = [l, k1, fl_map[k1][l]]
+		for k in range(k1, k2, kstep):
+			if state == 0:
+				if fl_map[k][l] == id:
+					prev = [l, k, fl_map[k][l]]
+					state = 1
+			elif state == 1:
+				if fl_map[k][l] != id:
+					state = t
+					edges.append([t, prev, [l, k, fl_map[k][l]]])
+				else:
+					prev = [l, k, fl_map[k][l]]
+		return edges
+		
+	func find_edges(id):
+		var edges = []
+		for k in range(1, fl_depth - 1):
+			edges += find_edge_x(id, k, 0, 0, fl_width, 1)
+			edges += find_edge_x(id, k, 1, fl_width - 1, -1, -1)
+		for l in range(1, fl_width - 1):
+			edges += find_edge_y(id, l, 2, 0, fl_depth, 1)
+			edges += find_edge_y(id, l, 3, fl_depth - 1, -1, -1)
+		return edges
+	func add_room(id, x, y):
+		room_data[id] = [x, y]
+	func generate_corridoor():
+		var C_DEPTH = 0
+		var C_WIDTH = 1
+		var c_style
+		var c_width
+		var c_length
+		var cx = int(fl_width / 2 + 0.5)
+		var cy = int(fl_depth / 2 + 0.5)
+		var dx
+		var dy
+		var rx
+		var ry
+		var c_width_min = 2.0 / grid_item
+		if fl_width > fl_depth:
+			c_style = C_WIDTH
+			c_width = c_width_min + randi() % int(fl_width / 4)
+			c_length = fl_width
+		elif fl_depth >= fl_width:
+			c_style = C_DEPTH
+			c_width = c_width_min + randi() % int(fl_depth / 4)
+			c_length = fl_depth
+		if c_style == C_WIDTH:
+			rx = c_length
+			ry = c_width
+		elif c_style == C_DEPTH:
+			rx = c_width
+			ry = c_length
+		dx = cx - int(rx / 2)
+		dy = cy - int(ry / 2)
+		for k in range(rx):
+			var tx = dx + k
+			for l in range(ry):
+				var ty = dy + l
+				if fl_map[ty][tx] == 0:
+					fl_map[ty][tx] = CORRIDOOR
+	func connect_entry(efrom, eto):
+		var efrom_edges = find_edges(efrom)
+		for l in efrom_edges:
+			if l[2][2] == eto:
+				print(l[1][2], " => ", l[2][2])
+				print(l[1][0], ", ", l[1][1], " --> ", l[2][0], ", ", l[2][1])
+		var eto_edges = find_edges(eto)
+		for l in eto_edges:
+			if l[2][2] == efrom:
+				print(l[1][2], " <= ", l[2][2])
+				print(l[1][0], ", ", l[1][1], " <-- ", l[2][0], ", ", l[2][1])
 
 class BuildData extends MeshInstance:
 	var shape_tris = []
@@ -106,97 +298,13 @@ class BuildData extends MeshInstance:
 		body.add_shape(shape)
 		add_child(body)
 
-class Corridoor extends BuildData:
-	var corridoor_width_min
-	const C_DEPTH = 0
-	const C_WIDTH = 1
-	var c_style
-	var c_width
-	var c_length
+class Roomspace extends BuildData:
 	var fl_width
 	var fl_depth
 	var fl_map
-	func generate_corridoor():
-		var cx = int(fl_width / 2 + 0.5)
-		var cy = int(fl_depth / 2 + 0.5)
-		var dx
-		var dy
-		var rx
-		var ry
-		if c_style == C_WIDTH:
-			rx = c_length
-			ry = c_width
-		elif c_style == C_DEPTH:
-			rx = c_width
-			ry = c_length
-		dx = cx - int(rx / 2)
-		dy = cy - int(ry / 2)
-		for k in range(rx):
-			var tx = dx + k
-			for l in range(ry):
-				var ty = dy + l
-				fl_map[ty][tx] = CORRIDOOR
-	func grow_room_rect(id):
-		var min_x = fl_width
-		var max_x = -1
-		var min_y = fl_depth
-		var max_y = -1
-		for k in range(fl_map.size()):
-			for l in range(fl_map[k].size()):
-				if fl_map[k][l] == id:
-					if min_x > l:
-						min_x = l
-					if max_x < l:
-						max_x = l
-					if min_y > k:
-						min_y = k
-					if max_y < k:
-						max_y = k
-		var start_x = clamp(min_x - 1, 0, fl_width - 1)
-		var end_x = clamp(max_x + 1, 0, fl_width - 1)
-		var start_y = clamp(min_y - 1, 0, fl_depth - 1)
-		var end_y = clamp(max_y + 1, 0, fl_depth - 1)
-		var can_grow_top = true
-		var can_grow_bottom = true
-		var can_grow_left = true
-		var can_grow_right = true
-		for k in range(start_x, end_x + 1):
-			var h = fl_map[start_y][k]
-			if h != id and h != 0:
-				start_y = clamp(min_y, 0, fl_depth)
-				can_grow_top = false
-				break
-		for k in range(start_x, end_x + 1):
-			var h = fl_map[end_y][k]
-			if h != id and h != 0:
-				end_y = clamp(max_y, 0, fl_depth)
-				can_grow_bottom = false
-				break
-		for k in range(start_y, end_y + 1):
-			var h = fl_map[k][start_x]
-			if h != id and h != 0:
-				start_x = clamp(min_x, 0, fl_width)
-				can_grow_left = false
-				break
-		for k in range(start_y, end_y + 1):
-			var h = fl_map[k][end_x]
-			if h != id and h != 0:
-				end_x = clamp(max_x, 0, fl_width)
-				can_grow_right = false
-				break
-		for k in range(start_y, end_y + 1):
-			for l in range(start_x, end_x + 1):
-				fl_map[k][l] = id
-		for k in [can_grow_top, can_grow_bottom, can_grow_left, can_grow_right]:
-			if k:
-				return true
-		return false
-
-	func grow_entry():
-		for k in range(10 + randi() % 10):
-			grow_room_rect(ENTRY)
-	func connect_entry():
-		pass
+	var fl_edges
+	var fl_exclusions
+	var color
 	func place_wall(st, l, k, q):
 		var u = quad_uvs(Vector2(), Vector2(grid_item, grid_item))
 		var pv = Vector3((l - int(fl_width / 2.0)) * grid_item, floor_height / 2.0 , (k - int(fl_depth / 2.0))* grid_item)
@@ -209,92 +317,32 @@ class Corridoor extends BuildData:
 		add_quad(st, v[0], v[1], v[2], v[3], u[0], u[1], u[2], u[3])
 		add_quad(st, v[3], v[2], v[1], v[0], u[0], u[1], u[2], u[3])
 	func check_place_wall(st, l, k, q):
-		if not fl_map[k][l] in [CORRIDOOR, ENTRY, OUTER_WALL, ENTRY_DOOR]:
+		if not fl_map[k][l] in fl_exclusions:
 			place_wall(st, l, k, q)
-	func build_walls(st, id):
-		var state = 0
-		for k in range(1, fl_depth - 1):
-			for l in range(0, fl_width):
-				if state == 0:
-					if fl_map[k][l] == id:
-						state = 1
-				elif state == 1:
-					if fl_map[k][l] != id:
-						print([l, k])
-						state = 0
-						check_place_wall(st, l, k, 0)
-			for l in range(fl_width - 1, -1, -1):
-				if state == 0:
-					if fl_map[k][l] == id:
-						state = 1
-				elif state == 1:
-					if fl_map[k][l] != id:
-						print([l, k])
-						state = 0
-						check_place_wall(st, l, k, 1)
-		for l in range(1, fl_width - 1):
-			for k in range(0, fl_depth):
-				if state == 0:
-					if fl_map[k][l] == id:
-						state = 1
-				elif state == 1:
-					if fl_map[k][l] != id:
-						print([l, k])
-						state = 0
-						check_place_wall(st, l, k, 3)
-			for k in range(fl_depth - 1, -1, -1):
-				if state == 0:
-					if fl_map[k][l] == id:
-						state = 1
-				elif state == 1:
-					if fl_map[k][l] != id:
-						print([l, k])
-						state = 0
-						check_place_wall(st, l, k, 3)
-#		var u = quad_uvs(Vector2(), Vector2(grid_item, grid_item))
-#		var pv = Vector3(0.0, floor_height / 2.0 + 0.5, 0.0)
-#		var vs = Vector3(grid_item, floor_height - 1.8, grid_item)
-#		var v = quad1(pv, vs, 0)
-#		add_quad(st, v[0], v[1], v[2], v[3], u[0], u[1], u[2], u[3])
-#		add_quad(st, v[3], v[2], v[1], v[0], u[0], u[1], u[2], u[3])
-#		v = quad1(pv, vs, 1)
-#		add_quad(st, v[0], v[1], v[2], v[3], u[0], u[1], u[2], u[3])
-#		add_quad(st, v[3], v[2], v[1], v[0], u[0], u[1], u[2], u[3])
-#		v = quad2(pv, vs, 0)
-#		add_quad(st, v[0], v[1], v[2], v[3], u[0], u[1], u[2], u[3])
-#		add_quad(st, v[3], v[2], v[1], v[0], u[0], u[1], u[2], u[3])
-#		v = quad2(pv, vs, 1)
-#		add_quad(st, v[0], v[1], v[2], v[3], u[0], u[1], u[2], u[3])
-#		add_quad(st, v[3], v[2], v[1], v[0], u[0], u[1], u[2], u[3])
-#		v = quad3(pv, vs, 0)
-#		add_quad(st, v[0], v[1], v[2], v[3], u[0], u[1], u[2], u[3])
-#		add_quad(st, v[3], v[2], v[1], v[0], u[0], u[1], u[2], u[3])
-#		v = quad3(pv, vs, 1)
-#		add_quad(st, v[0], v[1], v[2], v[3], u[0], u[1], u[2], u[3])
-#		add_quad(st, v[3], v[2], v[1], v[0], u[0], u[1], u[2], u[3])
+	func build_walls(st, edges):
+		for k in edges:
+			if k[2][0] > k[1][0]:
+				check_place_wall(st, k[2][0], k[2][1], 0)
+			elif k[2][0] < k[1][0]:
+				check_place_wall(st, k[2][0], k[2][1], 1)
+			elif k[2][1] > k[1][1]:
+				check_place_wall(st, k[2][0], k[2][1], 2)
+			elif k[2][1] < k[1][1]:
+				check_place_wall(st, k[2][0], k[2][1], 3)
 	func prepare_data(st):
-		generate_corridoor()
-		grow_entry()
-		connect_entry()
-		material.set_parameter(material.PARAM_DIFFUSE, Color(0.2, 0.2, 1.6))
+		material.set_parameter(material.PARAM_DIFFUSE, color)
 		st.set_material(material)
 		st.begin(VS.PRIMITIVE_TRIANGLES)
-		build_walls(st, ENTRY)
-		build_walls(st, CORRIDOOR)
-	func _init(map):
-		var c_width_min = 2.0 / grid_item
+		build_walls(st, fl_edges)
+	func _init(map, edges, exclusions, c):
 		._init()
+		color = c
 		fl_width = map[0].size()
 		fl_depth = map.size()
 		fl_map = map
-		if fl_width > fl_depth:
-			c_style = C_WIDTH
-			c_width = c_width_min + randi() % int(fl_width / 4)
-			c_length = fl_width
-		elif fl_depth >= fl_width:
-			c_style = C_DEPTH
-			c_width = c_width_min + randi() % int(fl_depth / 4)
-			c_length = fl_depth
+		fl_edges = edges
+		fl_exclusions = exclusions
+
 class OuterWalls extends MeshInstance:
 	var shape_tris
 	var fl_width
@@ -343,6 +391,7 @@ class OuterWalls extends MeshInstance:
 		
 		if walltype == -1:
 			add_quad(st, v1, v8, v7, v2, u1, u8, u7, u2)
+			add_quad(st, v4, v3, v6, v5, u4, u3, u6, u5)
 		elif walltype == 0:
 			add_quad(st, v1, v2, v3, v4, u1, u2, u3, u4)
 			add_quad(st, v5, v6, v7, v8, u5, u6, u7, u8)
@@ -501,7 +550,7 @@ class OuterWalls extends MeshInstance:
 			add_wall_block(surfTool, k[1], k[0].x, k[0].y, k[0].z, 0)
 		for k in range(1, fl_depth - 1):
 			for l in range(1, fl_width - 1):
-					var trans = Vector3((l - int(fl_width / 2)) * grid_item, 0.0, (k - int(fl_depth / 2)) * grid_item)
+					var trans = Vector3((l - int(fl_width / 2)) * grid_item, -0.01, (k - int(fl_depth / 2)) * grid_item)
 					add_floor_block(surfTool, trans, 0.5, 0.02, 0.5)
 		surfTool.generate_normals()
 		surfTool.index()
@@ -518,54 +567,90 @@ class OuterWalls extends MeshInstance:
 		fl_map = map
 		outer_door_width = dw
 
-
-func init_grid():
-	for r in range(n_floors):
-		floor_grid.append([])
-		for k in range(building_depth):
-			floor_grid[r].append([])
-			for l in range(building_width):
-				floor_grid[r][k].append(0)
-func setup_outer_walls():
-	for r in range(n_floors):
-		for k in [0, building_depth - 1]:
-			for l in range(1, building_width - 1):
-				floor_grid[r][k][l] = OUTER_WALL
-		for k in range(0, building_depth):
-			for l in [0, building_width - 1]:
-				floor_grid[r][k][l] = OUTER_WALL
-	
 func setup_entry_door():
 	var wall = randi() % 4
 	if wall == 0:
 		entry_door = Vector2(randi() % building_width, 0)
-		floor_grid[0][entry_door.y + 1][entry_door.x] = ENTRY
-		floor_grid[n_floors - 1][entry_door.y + 1][entry_door.x] = ENTRY
+		floor_grid[0].get_map()[entry_door.y + 1][entry_door.x] = ENTRY
 	elif wall == 1:
 		entry_door = Vector2(randi() % building_width, building_depth - 1)
-		floor_grid[0][entry_door.y - 1][entry_door.x] = ENTRY
-		floor_grid[n_floors - 1][entry_door.y - 1][entry_door.x] = ENTRY
+		floor_grid[0].get_map()[entry_door.y - 1][entry_door.x] = ENTRY
 	elif wall == 2:
 		entry_door = Vector2(0, randi() % building_depth)
-		floor_grid[0][entry_door.y][entry_door.x + 1] = ENTRY
-		floor_grid[n_floors - 1][entry_door.y][entry_door.x + 1] = ENTRY
+		floor_grid[0].get_map()[entry_door.y][entry_door.x + 1] = ENTRY
 	elif wall == 3:
 		entry_door = Vector2(building_width - 1, randi() % building_depth)
-		floor_grid[0][entry_door.y][entry_door.x - 1] = ENTRY
-		floor_grid[n_floors - 1][entry_door.y][entry_door.x - 1] = ENTRY
-	floor_grid[0][entry_door.y][entry_door.x] = ENTRY_DOOR
-	floor_grid[n_floors - 1][entry_door.y][entry_door.x] = ENTRY_DOOR
-
+		floor_grid[0].get_map()[entry_door.y][entry_door.x - 1] = ENTRY
+	floor_grid[0].get_map()[entry_door.y][entry_door.x] = ENTRY_DOOR
+	floor_grid[n_floors - 1].get_map()[entry_door.y][entry_door.x] = ENTRY_DOOR
+	
 func _ready():
 	# Initialization here
-	init_grid()
-	setup_outer_walls()
-	setup_entry_door()
 	for h in range(n_floors):
-		var ov = OuterWalls.new(floor_grid[h], 0.9)
-		var c = Corridoor.new(floor_grid[h])
+		var map = Map.new(building_width, building_depth)
+		floor_grid.append(map)
+		map.setup_outer_walls()
+	for h in range(n_floors):
+		if h == 0:
+			setup_entry_door()
+		floor_grid[h].generate_corridoor()
+		if h == 0 or h == n_floors - 1:
+			floor_grid[h].grow_entry()
+		if h > 0:
+			floor_grid[h].copy_id(ENTRY, floor_grid[0])
+		floor_grid[h].connect_entry(ENTRY, CORRIDOOR)
+		var max_appartments = int((building_width + building_depth) / 16)
+		var min_appartments = 4
+		var n_appartments = min_appartments + randi() % (max_appartments - min_appartments)
+#		n_appartments = 10
+		var can_grow = {}
+		for k in range(2000, 2000 + n_appartments):
+			can_grow[k] = true
+			floor_grid[h].spawn_appartment(k)
+		can_grow[ENTRY] = true
+		var cnt = 8000
+		while true:
+			var grown = false
+			print("growing")
+			for k in can_grow.keys():
+				print("growing ", k)
+				if not floor_grid[h].grow_room_rect(k):
+					can_grow.erase(k)
+					print("can't grow ", k)
+				else:
+					print("grown ", k)
+					grown = true
+#				break
+			if cnt < 0:
+				break
+			else:
+				cnt = cnt - 1
+			if not grown:
+				break
+#			break
+	for h in range(n_floors):
+		var edges_c = floor_grid[h].find_edges(CORRIDOOR)
+		var edges_e = floor_grid[h].find_edges(ENTRY)
+		var ov = OuterWalls.new(floor_grid[h].get_map(), 0.9)
+		var c = Roomspace.new(floor_grid[h].get_map(), edges_c, [CORRIDOOR, ENTRY, OUTER_WALL, ENTRY_DOOR], Color(0.3, 0.3, 0.9))
+		var e = Roomspace.new(floor_grid[h].get_map(), edges_e, [CORRIDOOR, OUTER_WALL, ENTRY_DOOR], Color(0.9, 0.3, 0.3))
 		add_child(ov)
 		add_child(c)
+		add_child(e)
+		var tk = {}
+		for t in floor_grid[h].room_data.keys():
+			tk[t] = true
+			var edges_d = floor_grid[h].find_edges(t)
+			var d = Roomspace.new(floor_grid[h].get_map(), edges_d, [CORRIDOOR, OUTER_WALL, ENTRY_DOOR] + tk.keys(), Color(1.0, 1.0, 1.0))
+			add_child(d)
+			d.set_translation(Vector3(0.0, floor_height * h, 0.0))
+			var light = OmniLight.new()
+			light.set_parameter(light.PARAM_ENERGY, 2.5)
+			light.set_parameter(light.PARAM_RADIUS, 5.0)
+			var trans = Vector3((floor_grid[h].room_data[t][0] - int(building_width / 2)) * grid_item, floor_height - 0.04, (floor_grid[h].room_data[t][1] - int(building_depth / 2)) * grid_item)
+			add_child(light)
+			light.set_translation(trans) 
 		ov.set_translation(Vector3(0.0, floor_height * h, 0.0))
 		c.set_translation(Vector3(0.0, floor_height * h, 0.0))
+		e.set_translation(Vector3(0.0, floor_height * h, 0.0))
 	
