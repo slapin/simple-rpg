@@ -5,7 +5,7 @@ extends Spatial
 # var a=2
 # var b="textvar"
 
-var n_floors = 2
+var n_floors = 5
 var floor_grid = []
 var building_width = 60
 var building_depth = 75
@@ -161,6 +161,20 @@ class Map:
 			edges += find_edge_y(id, l, 2, 0, fl_depth, 1)
 			edges += find_edge_y(id, l, 3, fl_depth - 1, -1, -1)
 		return edges
+	func find_wall_edges(id):
+		var edges = find_edges(id)
+		var r_edges = []
+		for k in edges:
+			if not edge_is_door(k):
+				r_edges.append(k)
+		return r_edges
+	func find_door_edges(id):
+		var edges = find_edges(id)
+		var r_edges = []
+		for k in edges:
+			if edge_is_door(k):
+				r_edges.append(k)
+		return r_edges
 	func add_room(id, x, y):
 		room_data[id] = [x, y]
 	func generate_corridoor():
@@ -199,27 +213,186 @@ class Map:
 				if fl_map[ty][tx] == 0:
 					fl_map[ty][tx] = CORRIDOOR
 	func connect_entry(efrom, eto):
-		var efrom_edges = find_edges(efrom)
-		for l in efrom_edges:
-			if l[2][2] == eto:
-				print(l[1][2], " => ", l[2][2])
-				print(l[1][0], ", ", l[1][1], " --> ", l[2][0], ", ", l[2][1])
-		var eto_edges = find_edges(eto)
-		for l in eto_edges:
-			if l[2][2] == efrom:
-				print(l[1][2], " <= ", l[2][2])
-				print(l[1][0], ", ", l[1][1], " <-- ", l[2][0], ", ", l[2][1])
+		pass
+#		var efrom_edges = find_edges(efrom)
+#		for l in efrom_edges:
+#			if l[2][2] == eto:
+#				print(l[1][2], " => ", l[2][2])
+#				print(l[1][0], ", ", l[1][1], " --> ", l[2][0], ", ", l[2][1])
+#		var eto_edges = find_edges(eto)
+#		for l in eto_edges:
+#			if l[2][2] == efrom:
+#				print(l[1][2], " <= ", l[2][2])
+#				print(l[1][0], ", ", l[1][1], " <-- ", l[2][0], ", ", l[2][1])
+	func replace_tile(what, with):
+#		print("FILL: ", what, ", ", with)
+		for k in fl_map:
+			for l in range(k.size()):
+				if k[l] == what:
+					k[l] = with
+	func group_edges(edges):
+		var edges_x = {}
+		var edges_y = {}
+		var group = []
+		for k in edges:
+			if not edges_x.has(k[1][0]):
+				edges_x[k[1][0]] = {}
+			edges_x[k[1][0]][k[1][1]] = k
+			if not edges_y.has(k[1][1]):
+				edges_y[k[1][1]] = {}
+			edges_y[k[1][1]][k[1][0]] = k
+		for r in edges_x.keys():
+			var state = 0
+			var prev
+			var et = edges_x[r].keys()
+			et.sort()
+#			print("X:", et)
+			prev = et[0]
+			state = 0
+			for t in et:
+				if state == 0:
+					prev = t
+					group = []
+					state = 1
+				elif state == 1:
+					if t - 1 == prev:
+#						print("adding: ", t)
+						group.append(edges_x[r][prev])
+						if group.size() > 1:
+							group.append(edges_x[r][t])
+							return group
+						prev = t
+					else:
+#						print("bad: ", t, " prev: ", prev, " group: ", group)
+						prev = t
+						group = []
+		for r in edges_y.keys():
+			var state = 0
+			var prev
+			var et = edges_y[r].keys()
+			et.sort()
+#			print("Y:", et)
+			prev = et[0]
+			state = 0
+			for t in et:
+				if state == 0:
+					prev = t
+					group = []
+					state = 1
+				elif state == 1:
+					if t - 1 == prev:
+#						print("adding: ", t)
+						group.append(edges_y[r][prev])
+						if group.size() > 1:
+							group.append(edges_y[r][t])
+							return group
+						prev = t
+					else:
+#						print("bad: ", t, " prev: ", prev, " group: ", group)
+						prev = t
+						group = []
+		return group
+	var corridoor_edges = {}
+	var outer_wall_edges = {}
+	var door_map_x = {}
+	var door_map_y = {}
+	func is_door(e1, e2):
+		var x = int(e1[0])
+		var y = int(e1[1])
+		var x1 = int(e2[0])
+		var y1 = int(e2[1])
+		if door_map_x.has(x):
+			if door_map_x[x].has(y):
+				if door_map_x[x][y].has(x1):
+					if door_map_x[x][y][x1].has(y1):
+#						print("is door: ", x, ", ", y, ": ", x1, ", ", y1)
+						return true
+#		print("not a door: ", x, ", ", y, ": ", x1, ", ", y1)
+		return false
+	func edge_is_door(edge):
+		if not is_door(edge[1], edge[2]):
+			if not is_door(edge[2], edge[1]):
+				return false
+		return true
+	func add_4_map(m, p1, p2, p3, p4):
+		if not m.has(p1):
+			m[p1] = {}
+		if not m[p1].has(p2):
+			m[p1][p2] = {}
+		if not m[p1][p2].has(p3):
+			m[p1][p2][p3] = {}
+		if not m[p1][p2][p3].has(p4):
+			m[p1][p2][p3][p4] = true
+		
+	func add_door_map(e1, e2):
+		var x = int(e1[0])
+		var y = int(e1[1])
+		var x1 = int(e2[0])
+		var y1 = int(e2[1])
+		add_4_map(door_map_x, x, y, x1, y1)
+		add_4_map(door_map_y, y, x, y1, x1)
+	func optimize_flats():
+		for k in room_data.keys():
+			var connected_to_corridoor = false
+			var connected_to_outer_wall = false
+			var room_edges = find_edges(k)
+			var neighbor_count = {}
+			for r in room_edges:
+				if neighbor_count.has(r[2][2]):
+					neighbor_count[r[2][2]] += 1
+				else:
+					neighbor_count[r[2][2]] = 1
+				if r[2][2] == CORRIDOOR:
+					connected_to_corridoor = true
+					if corridoor_edges.has(k):
+						corridoor_edges[k].append(r)
+					else:
+						corridoor_edges[k] = [r]
+				elif r[2][2] == OUTER_WALL:
+					connected_to_outer_wall = true
+					if outer_wall_edges.has(k):
+						outer_wall_edges[k].append(r)
+					else:
+						outer_wall_edges[k] = [r]
+			if connected_to_corridoor and connected_to_outer_wall \
+				and corridoor_edges[k].size() > 2 and outer_wall_edges[k].size() > 2:
+#				print("good room ", k)
+#				print(corridoor_edges[k])
+#				print(outer_wall_edges[k])
+#				print("group corridoor: ", group_edges(corridoor_edges[k]).size())
+#				print("group wall: ", group_edges(outer_wall_edges[k]).size())
+				for ev in corridoor_edges[k]:
+					add_door_map(ev[1], ev[2])
+				
+				# add doors here
+			else:
+				var c = 0
+				var d = 0
+				for m in neighbor_count.keys():
+					if c < neighbor_count[m]:
+						c = neighbor_count[m]
+						d = m
+				if d != 0:
+					replace_tile(k, d)
+		for k in door_map_x.keys():
+			for l in door_map_x[k].keys():
+				for m in door_map_x[k][l].keys():
+					for n in door_map_x[k][l][m].keys():
+						print("door: ", k, ", ", l, " => ", m, ", ", n)
+			
 
 class BuildData extends MeshInstance:
 	var shape_tris = []
 	var material
+	var col = true
 	func add_triangle(st, v1, v2, v3, u1, u2, u3):
 		var uvs = [u1, u2, u3]
 		var pts = [v1, v2, v3]
 		for g in range(pts.size()):
 			st.add_uv(uvs[g])
 			st.add_vertex(pts[g])
-		shape_tris = shape_tris + pts
+		if col:
+			shape_tris = shape_tris + pts
 	func add_quad(st, v1, v2, v3, v4, u1, u2, u3, u4):
 		add_triangle(st, v1, v2, v3, u1, u2, u3)
 		add_triangle(st, v3, v4, v1, u3, u4, u1)
@@ -287,16 +460,83 @@ class BuildData extends MeshInstance:
 		var surfTool = SurfaceTool.new()
 		var mesh = Mesh.new()
 		material = FixedMaterial.new()
-		var shape = ConcavePolygonShape.new()
+		var shape
+		if col:
+			shape = ConcavePolygonShape.new()
 		prepare_data(surfTool)
 		surfTool.generate_normals()
 		surfTool.index()
 		surfTool.commit(mesh)
 		set_mesh(mesh)
-		shape.set_faces(Vector3Array(shape_tris))
-		var body = StaticBody.new()
-		body.add_shape(shape)
-		add_child(body)
+		if col:
+			shape.set_faces(Vector3Array(shape_tris))
+			var body = StaticBody.new()
+			body.add_shape(shape)
+			add_child(body)
+
+class Doors extends Spatial:
+	var fl_edges
+	var fl_width
+	var fl_depth
+	var fl_data
+	func place_door(l, k, q):
+#		var u = quad_uvs(Vector2(), Vector2(grid_item, grid_item))
+#		var pv = Vector3((l - int(fl_width / 2.0)) * grid_item, 0.2 / 2.0 , (k - int(fl_depth / 2.0))* grid_item)
+		var door_pv = Vector3((l - int(fl_width / 2.0)) * grid_item, 0.0 , (k - int(fl_depth / 2.0))* grid_item)
+#		var vs = Vector3(0.8, 0.2, grid_item)
+		var door = fl_data.instance()
+		add_child(door)
+		if q == 0:
+			door_pv = door_pv + Vector3(-grid_item / 2.0, 0.0, 0.0)
+			door.set_translation(door_pv)
+			door.set_rotation(Vector3(0.0, PI/2.0, 0.0))
+		if q == 1:
+			door_pv = door_pv + Vector3(grid_item / 2.0, 0.0, 0.0)
+			door.set_translation(door_pv)
+			door.set_rotation(Vector3(0.0, -PI/2.0, 0.0))
+		elif q == 2:
+			door_pv = door_pv + Vector3(0.0, 0.0, grid_item / 2.0)
+			door.set_translation(door_pv)
+			door.set_rotation(Vector3(0.0, PI, 0.0))
+		elif q == 3:
+			door_pv = door_pv + Vector3(0.0, 0.0, -grid_item / 2.0)
+			door.set_translation(door_pv)
+			door.set_rotation(Vector3(0.0, -PI, 0.0))
+#		var v
+#		if q == 0 or q == 1:
+#			v = quad3(pv, vs, q)
+#		elif q == 2 or q == 3:
+#			v = quad1(pv, vs, q - 2)
+#		add_quad(st, v[0], v[1], v[2], v[3], u[0], u[1], u[2], u[3])
+#		add_quad(st, v[3], v[2], v[1], v[0], u[0], u[1], u[2], u[3])
+	func build_doors(edges):
+		var e_edges = {}
+		for l in edges:
+			if e_edges.has(l[2][2]):
+				e_edges[l[2][2]].append(l)
+			else:
+				e_edges[l[2][2]] = [l]
+		for h in e_edges.keys():
+			var k = e_edges[h][1]
+			if k[2][0] > k[1][0]:
+				place_door(k[2][0], k[2][1], 0)
+			elif k[2][0] < k[1][0]:
+				place_door(k[2][0], k[2][1], 1)
+			elif k[2][1] > k[1][1]:
+				place_door(k[2][0], k[2][1], 2)
+			elif k[2][1] < k[1][1]:
+				place_door(k[2][0], k[2][1], 3)
+	func _ready():
+#		material.set_parameter(material.PARAM_DIFFUSE, color)
+#		st.set_material(material)
+#		st.begin(VS.PRIMITIVE_TRIANGLES)
+		build_doors(fl_edges)
+	func _init(edges, w, d):
+		._init()
+		fl_edges = edges
+		fl_width = w
+		fl_depth = d
+		fl_data = load("res://building/c_door.scn")
 
 class Roomspace extends BuildData:
 	var fl_width
@@ -550,8 +790,9 @@ class OuterWalls extends MeshInstance:
 			add_wall_block(surfTool, k[1], k[0].x, k[0].y, k[0].z, 0)
 		for k in range(1, fl_depth - 1):
 			for l in range(1, fl_width - 1):
-					var trans = Vector3((l - int(fl_width / 2)) * grid_item, -0.01, (k - int(fl_depth / 2)) * grid_item)
-					add_floor_block(surfTool, trans, 0.5, 0.02, 0.5)
+					var trans = Vector3((l - int(fl_width / 2)) * grid_item, -0.1, (k - int(fl_depth / 2)) * grid_item)
+					if not fl_map[k][l] in [0, ENTRY]:
+						add_floor_block(surfTool, trans, 0.5, 0.2, 0.5)
 		surfTool.generate_normals()
 		surfTool.index()
 		surfTool.commit(mesh)
@@ -611,14 +852,10 @@ func _ready():
 		var cnt = 8000
 		while true:
 			var grown = false
-			print("growing")
 			for k in can_grow.keys():
-				print("growing ", k)
 				if not floor_grid[h].grow_room_rect(k):
 					can_grow.erase(k)
-					print("can't grow ", k)
 				else:
-					print("grown ", k)
 					grown = true
 #				break
 			if cnt < 0:
@@ -628,19 +865,25 @@ func _ready():
 			if not grown:
 				break
 #			break
+		floor_grid[h].optimize_flats()
 	for h in range(n_floors):
-		var edges_c = floor_grid[h].find_edges(CORRIDOOR)
-		var edges_e = floor_grid[h].find_edges(ENTRY)
+		var edges_c = floor_grid[h].find_wall_edges(CORRIDOOR)
+		var edges_e = floor_grid[h].find_wall_edges(ENTRY)
+		var edges_d = floor_grid[h].find_door_edges(CORRIDOOR)
+		for k in edges_d:
+			print(k)
 		var ov = OuterWalls.new(floor_grid[h].get_map(), 0.9)
 		var c = Roomspace.new(floor_grid[h].get_map(), edges_c, [CORRIDOOR, ENTRY, OUTER_WALL, ENTRY_DOOR], Color(0.3, 0.3, 0.9))
 		var e = Roomspace.new(floor_grid[h].get_map(), edges_e, [CORRIDOOR, OUTER_WALL, ENTRY_DOOR], Color(0.9, 0.3, 0.3))
+		var d = Doors.new(edges_d, building_width, building_depth)
 		add_child(ov)
 		add_child(c)
 		add_child(e)
+		add_child(d)
 		var tk = {}
 		for t in floor_grid[h].room_data.keys():
 			tk[t] = true
-			var edges_d = floor_grid[h].find_edges(t)
+			var edges_d = floor_grid[h].find_wall_edges(t)
 			var d = Roomspace.new(floor_grid[h].get_map(), edges_d, [CORRIDOOR, OUTER_WALL, ENTRY_DOOR] + tk.keys(), Color(1.0, 1.0, 1.0))
 			add_child(d)
 			d.set_translation(Vector3(0.0, floor_height * h, 0.0))
@@ -653,4 +896,5 @@ func _ready():
 		ov.set_translation(Vector3(0.0, floor_height * h, 0.0))
 		c.set_translation(Vector3(0.0, floor_height * h, 0.0))
 		e.set_translation(Vector3(0.0, floor_height * h, 0.0))
+		d.set_translation(Vector3(0.0, floor_height * h, 0.0))
 	
